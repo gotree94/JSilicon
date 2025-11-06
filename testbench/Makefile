@@ -7,7 +7,7 @@ VCSFLAGS = -sv -access +rwc -linedebug -gui
 VLOGFLAGS = +v2k -access +rwc
 
 # Source files directory
-SRC_DIR = ../uploads
+SRC_DIR = ../
 TB_DIR = .
 
 # Design source files
