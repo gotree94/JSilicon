@@ -81,7 +81,7 @@ xrun +v2k -access +rwc ../alu.v \
 # GUI 모드로 파형 확인
 xrun +v2k -access +rwc -gui ../alu.v ../tb_alu.v
 xrun -gui -access +rwc ../alu.v  -log alu_sim_gui.log
-xrun -gui -access +rwc ../alu.v ../tb_alu.v -log alu_sim_gui.log
+xrun -gui -access +rwc ../alu.v ../tb_alu.v -top tb_alu -log alu_sim.log
 
 # 또는 VCD 파일 생성 후 파형 뷰어로 확인
 # 시뮬레이션 실행 후 생성되는 *.vcd 파일을 SimVision으로 열기
