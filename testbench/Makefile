@@ -3,7 +3,7 @@
 
 # Compiler settings
 XRUN = xrun
-XRUNFLAGS = +v2k -access +rwc -clean
+XRUNFLAGS = +v2k -access +rwc -clean -timescale 1ns/1ps
 
 # Source files directory
 SRC_DIR = ..
