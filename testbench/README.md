@@ -46,40 +46,40 @@ make clean
 
 ```bash
 # ALU 테스트
-xrun +v2k -access +rwc /mnt/user-data/uploads/alu.v tb_alu.v
+xrun +v2k -access +rwc ../alu.v ../tb_alu.v
 
 # UART 테스트
-xrun +v2k -access +rwc /mnt/user-data/uploads/uart.v tb_uart.v
+xrun +v2k -access +rwc ../uart.v ../tb_uart.v
 
 # PC 테스트
-xrun +v2k -access +rwc /mnt/user-data/uploads/pc.v tb_pc.v
+xrun +v2k -access +rwc ../pc.v ../tb_pc.v
 
 # DECODER 테스트
-xrun +v2k -access +rwc /mnt/user-data/uploads/inst.v tb_decoder.v
+xrun +v2k -access +rwc ../inst.v ../tb_decoder.v
 
 # REG 테스트
-xrun +v2k -access +rwc /mnt/user-data/uploads/regfile.v tb_reg.v
+xrun +v2k -access +rwc ../regfile.v ../tb_reg.v
 
 # SWITCH 테스트
-xrun +v2k -access +rwc /mnt/user-data/uploads/switch.v tb_switch.v
+xrun +v2k -access +rwc ../switch.v ../tb_switch.v
 
 # FSM 테스트 (여러 소스 파일 필요)
-xrun +v2k -access +rwc /mnt/user-data/uploads/alu.v \
-     /mnt/user-data/uploads/uart.v /mnt/user-data/uploads/fsm.v tb_fsm.v
+xrun +v2k -access +rwc ../alu.v \
+     ../uart.v ../fsm.v ../tb_fsm.v
 
 # TOP 모듈 테스트 (전체 시스템)
-xrun +v2k -access +rwc /mnt/user-data/uploads/alu.v \
-     /mnt/user-data/uploads/uart.v /mnt/user-data/uploads/pc.v \
-     /mnt/user-data/uploads/inst.v /mnt/user-data/uploads/regfile.v \
-     /mnt/user-data/uploads/switch.v /mnt/user-data/uploads/fsm.v \
-     /mnt/user-data/uploads/jsilicon.v tb_jsilicon_top.v
+xrun +v2k -access +rwc ../alu.v \
+     ../uart.v ../pc.v \
+     ../inst.v ../regfile.v \
+     ../switch.v ../fsm.v \
+     ../jsilicon.v ../tb_jsilicon_top.v
 ```
 
 ### 방법 3: GUI 모드로 실행
 
 ```bash
 # GUI 모드로 파형 확인
-xrun +v2k -access +rwc -gui /mnt/user-data/uploads/alu.v tb_alu.v
+xrun +v2k -access +rwc -gui ../alu.v ../tb_alu.v
 
 # 또는 VCD 파일 생성 후 파형 뷰어로 확인
 # 시뮬레이션 실행 후 생성되는 *.vcd 파일을 SimVision으로 열기
