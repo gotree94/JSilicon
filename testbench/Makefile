@@ -2,9 +2,8 @@
 # Jsilicon Design Testbenches
 
 # Compiler settings
-VCS = xrun
-VCSFLAGS = -sv -access +rwc -linedebug -gui
-VLOGFLAGS = +v2k -access +rwc
+XRUN = xrun
+XRUNFLAGS = +v2k -access +rwc -clean
 
 # Source files directory
 SRC_DIR = ..
@@ -53,44 +52,36 @@ help:
 # Individual module simulations
 alu:
 	@echo "Running ALU testbench..."
-	$(VCS) $(VLOGFLAGS) $(ALU_SRC) $(TB_ALU) -o alu_sim
-	./alu_sim
+	$(XRUN) $(XRUNFLAGS) $(ALU_SRC) $(TB_ALU)
 
 uart:
 	@echo "Running UART testbench..."
-	$(VCS) $(VLOGFLAGS) $(UART_SRC) $(TB_UART) -o uart_sim
-	./uart_sim
+	$(XRUN) $(XRUNFLAGS) $(UART_SRC) $(TB_UART)
 
 pc:
 	@echo "Running PC testbench..."
-	$(VCS) $(VLOGFLAGS) $(PC_SRC) $(TB_PC) -o pc_sim
-	./pc_sim
+	$(XRUN) $(XRUNFLAGS) $(PC_SRC) $(TB_PC)
 
 decoder:
 	@echo "Running DECODER testbench..."
-	$(VCS) $(VLOGFLAGS) $(INST_SRC) $(TB_DECODER) -o decoder_sim
-	./decoder_sim
+	$(XRUN) $(XRUNFLAGS) $(INST_SRC) $(TB_DECODER)
 
 reg:
 	@echo "Running REG testbench..."
-	$(VCS) $(VLOGFLAGS) $(REG_SRC) $(TB_REG) -o reg_sim
-	./reg_sim
+	$(XRUN) $(XRUNFLAGS) $(REG_SRC) $(TB_REG)
 
 switch:
 	@echo "Running SWITCH testbench..."
-	$(VCS) $(VLOGFLAGS) $(SWITCH_SRC) $(TB_SWITCH) -o switch_sim
-	./switch_sim
+	$(XRUN) $(XRUNFLAGS) $(SWITCH_SRC) $(TB_SWITCH)
 
 fsm:
 	@echo "Running FSM testbench..."
-	$(VCS) $(VLOGFLAGS) $(ALU_SRC) $(UART_SRC) $(FSM_SRC) $(TB_FSM) -o fsm_sim
-	./fsm_sim
+	$(XRUN) $(XRUNFLAGS) $(ALU_SRC) $(UART_SRC) $(FSM_SRC) $(TB_FSM)
 
 top:
 	@echo "Running TOP module testbench..."
-	$(VCS) $(VLOGFLAGS) $(ALU_SRC) $(UART_SRC) $(PC_SRC) $(INST_SRC) \
-	       $(REG_SRC) $(SWITCH_SRC) $(FSM_SRC) $(TOP_SRC) $(TB_TOP) -o top_sim
-	./top_sim
+	$(XRUN) $(XRUNFLAGS) $(ALU_SRC) $(UART_SRC) $(PC_SRC) $(INST_SRC) \
+	       $(REG_SRC) $(SWITCH_SRC) $(FSM_SRC) $(TOP_SRC) $(TB_TOP)
 
 # Run all tests
 all_tests: alu uart pc decoder reg switch fsm top
@@ -101,9 +92,8 @@ all_tests: alu uart pc decoder reg switch fsm top
 # Clean targets
 clean:
 	@echo "Cleaning simulation files..."
-	rm -rf *.log *.vcd *.key *_sim
-	rm -rf xcelium.d simv* csrc *.daidir
-	rm -rf INCA_libs waves.shm
+	rm -rf *.log *.vcd *.key *.history
+	rm -rf xcelium.d INCA_libs waves.shm
 	@echo "Clean complete!"
 
 .PHONY: all help alu uart pc decoder reg switch fsm top all_tests clean
