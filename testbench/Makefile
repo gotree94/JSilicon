@@ -21,14 +21,14 @@ FSM_SRC = $(SRC_DIR)/fsm.v
 TOP_SRC = $(SRC_DIR)/jsilicon.v
 
 # Testbench files
-TB_ALU = tb_alu.v
-TB_UART = tb_uart.v
-TB_PC = tb_pc.v
-TB_DECODER = tb_decoder.v
-TB_REG = tb_reg.v
-TB_SWITCH = tb_switch.v
-TB_FSM = tb_fsm.v
-TB_TOP = tb_jsilicon_top.v
+TB_ALU = ../tb_alu.v
+TB_UART = ../tb_uart.v
+TB_PC = ../tb_pc.v
+TB_DECODER = ../tb_decoder.v
+TB_REG = ../tb_reg.v
+TB_SWITCH = ../tb_switch.v
+TB_FSM = ../tb_fsm.v
+TB_TOP = ../tb_jsilicon_top.v
 
 # Default target
 all: help
