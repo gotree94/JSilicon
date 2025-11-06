@@ -13,13 +13,13 @@ ls -la
 # 다음 파일들이 있어야 합니다:
 # - tb_alu.v, tb_uart.v, tb_pc.v, tb_decoder.v
 # - tb_reg.v, tb_switch.v, tb_fsm.v, tb_jsilicon_top.v
-# - Makefile, README.md, design_summary.md
+# - Makefile
 ```
 
 ### 2단계: 간단한 테스트 실행
 ```bash
 # ALU 테스트 (가장 기본적인 테스트)
-xrun +v2k -access +rwc /mnt/user-data/uploads/alu.v tb_alu.v
+xrun +v2k -access +rwc ../alu.v ../tb_alu.v
 
 # 또는 Makefile 사용
 make alu
@@ -64,7 +64,7 @@ xrun +v2k -access +rwc -gui [소스파일.v] [테스트벤치.v]
 ### 파형 생성 후 확인
 ```bash
 # 1. 시뮬레이션 실행 (VCD 파일 생성됨)
-xrun +v2k -access +rwc /mnt/user-data/uploads/alu.v tb_alu.v
+xrun +v2k -access +rwc ../alu.v ../tb_alu.v
 
 # 2. 파형 뷰어로 열기
 simvision alu_wave.vcd
@@ -120,7 +120,7 @@ PC=0: ADD 3  -> R0 = 5 + 3 = 8 (순환)
 ls /mnt/user-data/uploads/
 
 # 경로를 정확히 지정
-xrun +v2k /mnt/user-data/uploads/alu.v tb_alu.v
+xrun +v2k ../alu.v ../tb_alu.v
 ```
 
 ### 시뮬레이션 시간이 너무 길 때
@@ -188,11 +188,7 @@ done
 ```bash
 # 더 많은 디버그 정보 출력
 xrun +v2k -access +rwc -linedebug -messages \
-     /mnt/user-data/uploads/alu.v tb_alu.v
+     ../alu.v ../tb_alu.v
 ```
 
 ---
-
-**마지막 업데이트**: 2024-11-06
-**버전**: 1.0
-**호환**: Xcelsium (Cadence) / Verilog-1995
