@@ -1,8 +1,11 @@
 # 실행 절차 (Step-by-Step)
 
+---
+
 ## CLOCK 설정
    * Fclk = 12 MHz
    * Baud = 9600 bps
+---
 
 ## 버튼정의
 
@@ -26,6 +29,8 @@
 * 버튼은 메커니컬 바운스가 있으므로 실제 하드웨어에서는 2-FF 동기화 + 디바운서 회로를 추가하면 안정적.
 * Up/Down/Left/Right 버튼은 확장 제어용으로 자유롭게 할당 가능(예: Step 실행, Mode 전환 등).
 
+---
+
 ## A. Manual 모드 (SW4=0)
 1. SW3(ena)=1, BTNC 눌렀다 떼서 리셋 해제
 2. 연산 선택:
@@ -42,7 +47,7 @@
    * LED 하위 7비트에 0x19의 LSBs가 보이고, busy LED(최상위 비트)가 TX 동안 켜졌다 꺼짐
 
 
-
+---
 
 ## B. CPU 모드 (SW4=1)
 1. SW3(ena)=1, BTNC 리셋
@@ -51,7 +56,7 @@
 4. SW4를 0/1 토글하며 Manual↔CPU 전환 시 UART busy가 0일 때 전환 추천(글리치 회피)
 
 
-
+---
 
 
 ## C. Disable/Reset 동작 확인
@@ -68,7 +73,10 @@
    * busy LED가 전송 타이밍 동안만 켜짐
   
 
-🎯 QUIZ
+# 🎯 QUIZ
+
+---
+
 🧩 Part 1. Basys3 실험 퀴즈 (이론 + 실습 혼합)
 
 | 번호  | 퀴즈 내용                                                            | 정답 포인트                                                      |
@@ -84,6 +92,7 @@
 | Q9  | ROM이 `initial begin` 블록으로 초기화되어 있음에도 합성 가능한 이유는?                 | Vivado가 초기화 내용을 Bitstream에 포함 (BRAM/LUTROM으로 매핑)            |
 | Q10 | TinyTapeout 버전과 Basys3 버전의 차이는 무엇인가요?                            | TinyTapeout은 mask-level RTL용 최소형, Basys3는 교육 및 실시간 입출력용 확장형 |
 
+---
 
 🚀 Part 2. 업그레이드 요청 아이디어
 
