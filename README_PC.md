@@ -67,30 +67,68 @@ Program Counter(PC)는 CPU에서 **현재 실행 중인 명령어의 주소를 �
 ## 🔧 4. 코드 구조 예시
 
 ```verilog
-module PC #(
-    parameter PC_W = 16,          // 주소 폭
-    parameter STEP = 1,           // 증가 단위
-    parameter RESET_ADDR = 0      // 초기화 주소
-)(
-    input  wire clk,
-    input  wire rst_n,
-    input  wire pc_load,
-    input  wire [PC_W-1:0] pc_next,
-    input  wire branch_taken,
-    input  wire [PC_W-1:0] pc_offset,
-    output reg  [PC_W-1:0] pc_curr
-);
+// mode=1, program counter + rom
+// 프로그램 카운터 + 롬 ( CPU 모드 1 인 경우 )
 
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n)
-            pc_curr <= RESET_ADDR;
-        else if (pc_load)
-            pc_curr <= pc_next;
-        else if (branch_taken)
-            pc_curr <= pc_curr + pc_offset;
-        else
-            pc_curr <= pc_curr + STEP;
+`define default_netname none
+
+(* keep_hierarchy *)
+module PC (
+    input wire clock,
+    input wire reset,
+    input wire ena,
+
+    // 디버그 포트 - JSilicon.v (TOP)에서 사용하지 않도록 설정하여 제거
+    // output wire [3:0] pc_out,
+    output wire [7:0] instr_out
+
+    );
+
+    reg [3:0] pc;
+    // 하드코딩 롬 지정
+    // wire 선언시 오류 발생 > reg로 수정
+    reg [7:0] rom [0:15];
+
+    // 내장 롬 명령어 지시 (프로그램)
+    // 명령구조 : [7:5] = opcode, [4:0]=operand 
+    // ex, ADD 3  = [000](opcode) + [00011](operand)
+    // todo - FSM 명령어 추가하기 (25.10.06)  
+
+    // 루프 변수 추가
+    integer i; 
+    initial begin
+        // ADD 3
+        rom[0] = 8'b00000011;
+        // SUB 2
+        rom[1] = 8'b00100010;
+        // MUL 5
+        rom[2] = 8'b01000101;
+        // NOP
+        rom[3] = 8'b00000000;
+
+        //  Sky130 합성에 맞춰서 조정
+        for (i = 4; i < 16; i = i + 1)
+            // 데이터를 쓰기 전에는 0으로 채워두기
+            rom[i] = 8'b00000000;
     end
+
+    always @(posedge clock or posedge reset) begin
+        // 명시적 비트폭(합성 경고 해결)로 지정
+        if (reset) pc <= 4'd0;
+        else if (ena) begin
+            // 롬 명령어 끝까지 도달하면 0으로 로드
+            if (pc == 4'd3)
+                pc <= 4'd0;
+            else
+                pc <= pc + 1;
+        end
+    end
+
+    // 포트명 오류 수정
+    assign instr_out = rom[pc];
+
+    // 디버그 포트 - 합성 과정에서 pc_out 포트 제거로 인한 제거
+    // assign pc_out = pc;
 
 endmodule
 ```
@@ -114,31 +152,146 @@ endmodule
 ## 🧪 6. Testbench 예시
 
 ```verilog
+// PC (Program Counter + ROM) Testbench for Xcelsium (Verilog-1995)
+// Tests program counter and ROM instruction fetch
+
 `timescale 1ns/1ps
+
 module tb_pc;
-  reg clk=0, rst_n=0, pc_load=0, branch_taken=0;
-  reg [15:0] pc_next=0, pc_offset=0;
-  wire [15:0] pc_curr;
 
-  PC #(.PC_W(16), .STEP(1), .RESET_ADDR(16'h0000)) uut (
-    .clk(clk), .rst_n(rst_n),
-    .pc_load(pc_load), .pc_next(pc_next),
-    .branch_taken(branch_taken), .pc_offset(pc_offset),
-    .pc_curr(pc_curr)
-  );
+    // Inputs
+    reg clock;
+    reg reset;
+    reg ena;
 
-  always #5 clk = ~clk;
+    // Outputs
+    wire [7:0] instr_out;
 
-  initial begin
-    $display("=== PC TEST START ===");
-    rst_n=0; #10; rst_n=1;
-    repeat(3) @(posedge clk);
-    pc_load=1; pc_next=16'h0100; @(posedge clk); pc_load=0;
-    branch_taken=1; pc_offset=16'd2; @(posedge clk);
-    branch_taken=1; pc_offset=-16'sd1; @(posedge clk); branch_taken=0;
-    #10 $finish;
-  end
+    // Clock period (12 MHz = 83.33ns)
+    parameter CLK_PERIOD = 83.33;
+
+    // Instantiate the PC
+    PC uut (
+        .clock(clock),
+        .reset(reset),
+        .ena(ena),
+        .instr_out(instr_out)
+    );
+
+    // Clock generation
+    initial begin
+        clock = 0;
+        forever #(CLK_PERIOD/2) clock = ~clock;
+    end
+
+    // Test procedure
+    initial begin
+        // Initialize VCD dump
+        $dumpfile("pc_wave.vcd");
+        $dumpvars(0, tb_pc);
+
+        // Display header
+        $display("========================================");
+        $display("PC (Program Counter + ROM) Testbench");
+        $display("========================================");
+        $display("Time\t PC\t Instruction\t Opcode\t Operand\t Description");
+        $display("------------------------------------------------------------------------");
+
+        // Initialize inputs
+        reset = 1;
+        ena = 0;
+        #(CLK_PERIOD*5);
+
+        // Release reset
+        reset = 0;
+        #(CLK_PERIOD*5);
+
+        // Enable PC
+        ena = 1;
+        #(CLK_PERIOD*2);
+
+        // Run through one complete cycle (4 instructions)
+        repeat(4) begin
+            #(CLK_PERIOD);
+            $display("%0t\t %d\t 8'b%b\t %b\t %b\t\t %s", 
+                     $time, 
+                     uut.pc, 
+                     instr_out, 
+                     instr_out[7:5],
+                     instr_out[3:0],
+                     decode_instruction(instr_out));
+        end
+
+        // Run one more cycle to verify wrap-around
+        $display("\n--- Testing PC wrap-around ---");
+        repeat(4) begin
+            #(CLK_PERIOD);
+            $display("%0t\t %d\t 8'b%b\t %b\t %b\t\t %s", 
+                     $time, 
+                     uut.pc, 
+                     instr_out, 
+                     instr_out[7:5],
+                     instr_out[3:0],
+                     decode_instruction(instr_out));
+        end
+
+        // Test enable control
+        $display("\n--- Testing Enable Control (ena=0) ---");
+        ena = 0;
+        #(CLK_PERIOD*5);
+        $display("%0t\t %d\t 8'b%b\t %b\t %b\t\t ENA=0 (PC should not change)", 
+                 $time, uut.pc, instr_out, instr_out[7:5], instr_out[3:0]);
+
+        // Re-enable
+        ena = 1;
+        #(CLK_PERIOD);
+        $display("%0t\t %d\t 8'b%b\t %b\t %b\t\t ENA=1 (PC resumed)", 
+                 $time, uut.pc, instr_out, instr_out[7:5], instr_out[3:0]);
+
+        // Test reset during operation
+        $display("\n--- Testing Reset during operation ---");
+        #(CLK_PERIOD*2);
+        reset = 1;
+        #(CLK_PERIOD*2);
+        $display("%0t\t %d\t 8'b%b\t %b\t %b\t\t RESET (PC should go to 0)", 
+                 $time, uut.pc, instr_out, instr_out[7:5], instr_out[3:0]);
+        
+        reset = 0;
+        #(CLK_PERIOD*2);
+
+        // End simulation
+        $display("\n========================================");
+        $display("PC Testbench Complete");
+        $display("========================================");
+        #(CLK_PERIOD*5);
+        $finish;
+    end
+
+    // Function to decode instruction
+    function [255:0] decode_instruction;
+        input [7:0] instr;
+        reg [2:0] opcode;
+        reg [3:0] operand;
+        begin
+            opcode = instr[7:5];
+            operand = instr[3:0];
+            
+            case(opcode)
+                3'b000: decode_instruction = "ADD";
+                3'b001: decode_instruction = "SUB";
+                3'b010: decode_instruction = "MUL";
+                3'b011: decode_instruction = "DIV";
+                3'b100: decode_instruction = "MOD";
+                3'b101: decode_instruction = "CMP";
+                3'b110: decode_instruction = "GT";
+                3'b111: decode_instruction = "LT";
+                default: decode_instruction = "UNKNOWN";
+            endcase
+        end
+    endfunction
+
 endmodule
+
 ```
 
 ---
