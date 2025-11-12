@@ -159,6 +159,8 @@ Baud 오차율은 다음으로 계산합니다:
 
 \$\$ Error(%) = \frac{|F_{CLK}/Divider - BAUD|}{BAUD} \times 100 \$\$
 
+$$ \text{Error}(\%) = \frac{|F_{CLK}/Divider - \text{BAUD}|}{\text{BAUD}} \times 100 $$
+
 > ⚠️ 2% 이하 오차율이면 대부분의 UART 간 통신에서 안정적입니다.
 
 ---
