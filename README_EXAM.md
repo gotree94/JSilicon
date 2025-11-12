@@ -4,6 +4,26 @@
    * Fclk = 12 MHz
    * Baud = 9600 bps
 
+## 버튼정의
+
+| 역할                     | 입력 방법         |
+| ---------------------- | ------------- |
+| Reset                  | BTNC (Center) |
+| Mode 전환 (Manual / CPU) | SW4 슬라이드 스위치  |
+| Enable                 | SW3 슬라이드 스위치  |
+| Operand A / B          | SW15~SW8      |
+| Opcode                 | SW7~SW5       |
+
+| 구분       | 보드 핀명     | Verilog 신호명        | Active 상태    | 기능 설명                                       |
+| -------- | --------- | ------------------ | ------------ | ------------------------------------------- |
+| **BTNC** | Center 버튼 | `rst_n`            | Low (눌림 시 0) | 시스템 리셋 (Active-Low). 눌렀다 떼면 리셋 해제 후 프로그램 시작 |
+| **BTNU** | Up 버튼     | (옵션) `step_up`     | High         | CPU 수동 Step 실행 (옵션: ena=1일 때 1클럭 명령 수행)     |
+| **BTND** | Down 버튼   | (옵션) `mode_toggle` | High         | Manual ↔ CPU 모드 전환 토글 (SW4 대신 사용 가능)        |
+| **BTNL** | Left 버튼   | (옵션) `manual_prev` | High         | Manual 모드에서 이전 연산 결과 불러오기 (확장용)             |
+| **BTNR** | Right 버튼  | (옵션) `manual_next` | High         | Manual 모드에서 다음 연산 수행 (확장용)                  |
+
+
+
 ## A. Manual 모드 (SW4=0)
 1. SW3(ena)=1, BTNC 눌렀다 떼서 리셋 해제
 2. 연산 선택:
