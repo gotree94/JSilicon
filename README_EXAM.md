@@ -92,7 +92,8 @@
 | Q9  | ROM이 `initial begin` 블록으로 초기화되어 있음에도 합성 가능한 이유는?                 |
 | Q10 | TinyTapeout 버전과 Basys3 버전의 차이는 무엇인가요?                            |
 
-
+<details>
+  <summary><b>확인</summary>
 | 번호  | 퀴즈 내용                                                            | 정답 포인트                                                      |
 | --- | ---------------------------------------------------------------- | ----------------------------------------------------------- |
 | Q1  | ALU의 `opcode`가 3'b011일 때 수행되는 연산은 무엇인가요?                         | 나눗셈(DIV), 단 b=0이면 0으로 출력                                    |
@@ -105,7 +106,7 @@
 | Q8  | Basys3 버튼 중 BTNC의 역할은 무엇인가요?                                     | 리셋(Active-Low), 시스템 초기화                                     |
 | Q9  | ROM이 `initial begin` 블록으로 초기화되어 있음에도 합성 가능한 이유는?                 | Vivado가 초기화 내용을 Bitstream에 포함 (BRAM/LUTROM으로 매핑)            |
 | Q10 | TinyTapeout 버전과 Basys3 버전의 차이는 무엇인가요?                            | TinyTapeout은 mask-level RTL용 최소형, Basys3는 교육 및 실시간 입출력용 확장형 |
-
+</details>
 
 ---
 
