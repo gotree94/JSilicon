@@ -1,4 +1,4 @@
-# 실행 절차 (Step-by-Step)
+# EXAM
 
 ---
 
