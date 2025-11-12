@@ -45,6 +45,103 @@ UART(Universal Asynchronous Receiver/Transmitter)는 CPU와 외부 장치 간의
 이 설계에서는 TX 경로만 포함되어 있습니다.  
 Start → Data bits(LSB first) → Stop 순서로 직렬화됩니다.
 
+
+```verilog
+// UART 외부 송신 모듈
+
+//`define default_netname none
+`timescale 1ns / 1ps
+`default_nettype none
+
+(* keep_hierarchy *)
+module UART_TX(
+    input wire clock,
+    input wire reset,
+    input wire start,
+    input wire [7:0] data_in, 
+
+    output reg tx,
+    output reg busy
+    );
+
+    // CLOCK_DIV = Fclk / Baurate
+    // 12,000,000 / 9600
+    parameter CLOCK_DIV = 1250; // 시스템 클럭 9600bps 지정
+
+    reg [7:0] data_reg;
+    reg [2:0] bit_idx;
+    reg [15:0] clock_count;
+    reg [2:0] state;
+    
+    localparam IDLE = 3'd0;
+    localparam START = 3'd1;
+    localparam DATA = 3'd2;
+    localparam STOP = 3'd3;
+
+    always @(posedge clock or posedge reset) begin
+        if (reset) begin
+            tx <= 1'b1;
+            busy <= 1'b0;
+            state <= IDLE;
+            clock_count <= 16'd0;
+            bit_idx <= 3'd0;
+        end else begin
+            case (state)
+            // 상태코드 분리
+                // IDLE 상태 시
+                IDLE: begin
+                    tx <= 1'b1;
+                    busy <= 1'b0;
+                    if (start) begin
+                        data_reg <= data_in;
+                        state <= START;
+                        busy <= 1'b1;
+                    end
+                end
+                // START 
+                START: begin
+                    tx <= 1'b0; 
+                    // 주기 비교용 클럭 읽기 수정
+                    if (clock_count == CLOCK_DIV - 1) begin
+                        clock_count <= 16'd0;
+                        state <= DATA;
+                        bit_idx <= 3'd0;
+                    end else clock_count <= clock_count + 1'b1;
+                end
+
+                // DATA
+                DATA: begin
+                    tx <= data_reg[bit_idx];
+                    if (clock_count == CLOCK_DIV - 1) begin
+                        clock_count <= 16'd0;
+                        if (bit_idx == 3'd7) begin
+                            bit_idx <= 3'd0;
+                            state <= STOP;
+                        end else begin
+                            bit_idx <= bit_idx + 1'b1;
+                        end
+                    end else clock_count <= clock_count + 1'b1;
+                end
+
+                // STOP
+                STOP: begin
+                    tx <= 1'b1;
+                    if (clock_count == CLOCK_DIV - 1) begin
+                        state <= IDLE;
+                        busy <= 1'b0;
+                        clock_count <= 16'd0;
+                    end else clock_count <= clock_count + 1'b1;
+                end
+
+                default: begin
+                    state <= IDLE;
+                end
+            endcase
+        end
+    end
+endmodule
+```
+
 ---
 
 ## 🔢 3. Baud Rate 계산
@@ -151,25 +248,158 @@ localparam STOP  = 3'd3;
 ## 🧪 8. Testbench 예시
 
 ```verilog
+// UART_TX Testbench for Xcelsium (Verilog-1995)
+// Tests UART transmission at 9600 bps
+
 `timescale 1ns/1ps
-module tb_uart_tx;
-  reg clk=0, rst=0, start=0;
-  reg [7:0] data_in=8'h55;
-  wire tx, busy;
 
-  UART_TX uut(.clock(clk), .reset(rst), .start(start),
-              .data_in(data_in), .tx(tx), .busy(busy));
+module tb_uart;
 
-  always #41.6 clk = ~clk; // 약 12 MHz 클럭
+    // Inputs
+    reg clock;
+    reg reset;
+    reg start;
+    reg [7:0] data_in;
 
-  initial begin
-    rst=1; #100; rst=0;
-    #500 start=1; #20 start=0;
-    wait(!busy);
-    $display("UART TX done.");
-    #5000 $finish;
-  end
+    // Outputs
+    wire tx;
+    wire busy;
+
+    // Clock period (12 MHz = 83.33ns)
+    parameter CLK_PERIOD = 83.33;
+
+    // Instantiate the UART_TX
+    UART_TX uut (
+        .clock(clock),
+        .reset(reset),
+        .start(start),
+        .data_in(data_in),
+        .tx(tx),
+        .busy(busy)
+    );
+
+    // Clock generation
+    initial begin
+        clock = 0;
+        forever #(CLK_PERIOD/2) clock = ~clock;
+    end
+
+    // Test procedure
+    initial begin
+        // Initialize VCD dump
+        $dumpfile("uart_wave.vcd");
+        $dumpvars(0, tb_uart);
+
+        // Display header
+        $display("========================================");
+        $display("UART_TX Testbench Start");
+        $display("Clock: 12 MHz, Baudrate: 9600 bps");
+        $display("========================================");
+
+        // Initialize inputs
+        reset = 1;
+        start = 0;
+        data_in = 8'h00;
+        #(CLK_PERIOD*10);
+
+        // Release reset
+        reset = 0;
+        #(CLK_PERIOD*10);
+        $display("Time=%0t: Reset released", $time);
+
+        // Test 1: Send 0x55 (01010101 - alternating pattern)
+        $display("\n--- Test 1: Send 0x55 ---");
+        data_in = 8'h55;
+        start = 1;
+        #(CLK_PERIOD*2);
+        start = 0;
+        $display("Time=%0t: Start transmission of 0x55", $time);
+        
+        // Wait for busy flag
+        wait(busy == 1);
+        $display("Time=%0t: UART busy", $time);
+        
+        // Wait for transmission complete
+        wait(busy == 0);
+        $display("Time=%0t: Transmission complete", $time);
+        #(CLK_PERIOD*100);
+
+        // Test 2: Send 0xAA (10101010 - alternating pattern)
+        $display("\n--- Test 2: Send 0xAA ---");
+        data_in = 8'hAA;
+        start = 1;
+        #(CLK_PERIOD*2);
+        start = 0;
+        $display("Time=%0t: Start transmission of 0xAA", $time);
+        
+        wait(busy == 1);
+        $display("Time=%0t: UART busy", $time);
+        
+        wait(busy == 0);
+        $display("Time=%0t: Transmission complete", $time);
+        #(CLK_PERIOD*100);
+
+        // Test 3: Send 0xFF (11111111)
+        $display("\n--- Test 3: Send 0xFF ---");
+        data_in = 8'hFF;
+        start = 1;
+        #(CLK_PERIOD*2);
+        start = 0;
+        $display("Time=%0t: Start transmission of 0xFF", $time);
+        
+        wait(busy == 1);
+        $display("Time=%0t: UART busy", $time);
+        
+        wait(busy == 0);
+        $display("Time=%0t: Transmission complete", $time);
+        #(CLK_PERIOD*100);
+
+        // Test 4: Send 0x00 (00000000)
+        $display("\n--- Test 4: Send 0x00 ---");
+        data_in = 8'h00;
+        start = 1;
+        #(CLK_PERIOD*2);
+        start = 0;
+        $display("Time=%0t: Start transmission of 0x00", $time);
+        
+        wait(busy == 1);
+        $display("Time=%0t: UART busy", $time);
+        
+        wait(busy == 0);
+        $display("Time=%0t: Transmission complete", $time);
+        #(CLK_PERIOD*100);
+
+        // Test 5: Send ASCII 'A' (0x41)
+        $display("\n--- Test 5: Send ASCII 'A' (0x41) ---");
+        data_in = 8'h41;
+        start = 1;
+        #(CLK_PERIOD*2);
+        start = 0;
+        $display("Time=%0t: Start transmission of 0x41 ('A')", $time);
+        
+        wait(busy == 1);
+        $display("Time=%0t: UART busy", $time);
+        
+        wait(busy == 0);
+        $display("Time=%0t: Transmission complete", $time);
+        #(CLK_PERIOD*100);
+
+        // End simulation
+        $display("\n========================================");
+        $display("UART_TX Testbench Complete");
+        $display("========================================");
+        #(CLK_PERIOD*10);
+        $finish;
+    end
+
+    // Monitor TX line changes
+    initial begin
+        $monitor("Time=%0t: tx=%b, busy=%b, state=%d", 
+                 $time, tx, busy, uut.state);
+    end
+
 endmodule
+
 ```
 
 ---
