@@ -22,7 +22,9 @@
 | **BTNL** | Left 버튼   | (옵션) `manual_prev` | High         | Manual 모드에서 이전 연산 결과 불러오기 (확장용)             |
 | **BTNR** | Right 버튼  | (옵션) `manual_next` | High         | Manual 모드에서 다음 연산 수행 (확장용)                  |
 
-
+* Basys3 버튼은 Active-High 입력이지만, 리셋만 Active-Low(rst_n = ~BTNC)로 처리.
+* 버튼은 메커니컬 바운스가 있으므로 실제 하드웨어에서는 2-FF 동기화 + 디바운서 회로를 추가하면 안정적.
+* Up/Down/Left/Right 버튼은 확장 제어용으로 자유롭게 할당 가능(예: Step 실행, Mode 전환 등).
 
 ## A. Manual 모드 (SW4=0)
 1. SW3(ena)=1, BTNC 눌렀다 떼서 리셋 해제
