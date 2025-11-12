@@ -1,140 +1,35 @@
-# PC — Program Counter + ROM (CPU mode)
+# 실행 절차 (Step-by-Step)
 
-> Module: `PC`  
-> Role: **Instruction fetch** (4‑bit PC indexing an internal 16×8 ROM)  
-> Nettype: ``default_nettype none``  
-> Style: **TinyTapeout top**와 호환되는 단순 IF(Stage)
+## A. Manual 모드 (SW4=0)
+1. SW3(ena)=1, BTNC 눌렀다 떼서 리셋 해제
+2. 연산 선택:
+  * SW[15:12] = A (0~15), SW[11:8] = B (0~15)
+  * SW[7:5] opcode:
+     * 000=ADD, 001=SUB, 010=MUL, 011=DIV, 100=MOD, 101=EQ, 110=GT, 111=LT
+3. 결과 확인:
+   * LED 하위 영역: {busy, result[6:0]}
+   * LED 상위 영역: result[15:9]
+   * UART 터미널: 하위 8비트가 1바이트로 주기적 전송( FSM이 busy→idle 사이클)
+예) A=15, B=10, opcode=000(ADD):
+   * 예상 결과 = 25(0x19) → 터미널에 0x19 바이트 관측
+   * LED 하위 7비트에 0x19의 LSBs가 보이고, busy LED(최상위 비트)가 TX 동안 켜졌다 꺼짐
 
----
+## B. CPU 모드 (SW4=1)
+1. SW3(ena)=1, BTNC 리셋
+2. 내장 ROM 시퀀스가 자동 실행(ADD 3 → SUB 2 → MUL 5 → NOP → 루프)
+3. 각 명령의 결과 하위 8비트가 UART로 전송, LED에 결과 비트 표시
+4. SW4를 0/1 토글하며 Manual↔CPU 전환 시 UART busy가 0일 때 전환 추천(글리치 회피)
 
-## 📘 1) 개요 (Overview)
-`PC` 모듈은 4‑bit 프로그램 카운터를 사용해 **내장 ROM(16×8)** 에서 8‑bit 명령어를 읽어 `instr_out`으로 내보냅니다.  
-`ena=1`인 사이클마다 PC가 1씩 증가하며, 지정된 **끝 주소(예: 3)**에 도달하면 **0으로 랩어라운드**합니다.
+## C. Disable/Reset 동작 확인
+   * SW3를 0으로 내리면 PC/FSM 정지(상태 유지) → 1로 올리면 재개
+   * BTNC를 눌러 리셋: 내부 상태 초기화, PC=0부터 재시작
 
-데이터 경로:
-```
-clk, reset, ena ──> [ PC (4b) ] ──> rom[pc] ──> instr_out[7:0]
-```
+4) 검증 체크리스트
 
----
-
-## 🧠 2) 명령어 포맷(ISA fragment)
-본 프로젝트의 공통 포맷을 따릅니다.
-```
-[7:5]=opcode, [4]=reg_sel, [3:0]=imm4
-```
-- 예) `ADD 3` ⇒ `8'b000_0_0011`  
-- 현재 ROM 초기값 예시:
-  - `rom[0] = 8'b00000011; // ADD 3`
-  - `rom[1] = 8'b00100010; // SUB 2`
-  - `rom[2] = 8'b01000101; // MUL 5`
-  - `rom[3] = 8'b00000000; // NOP`
-  - `rom[4..15] = 8'b00000000` (클리어)
-
----
-
-## 🔌 3) 인터페이스
-
-### 입력
-| 이름 | 폭 | 설명 |
-|------|---:|------|
-| `clock` | 1 | 시스템 클럭 |
-| `reset` | 1 | 비동기 High 리셋 |
-| `ena` | 1 | Enable (1일 때 PC 진행) |
-
-### 출력
-| 이름 | 폭 | 설명 |
-|------|---:|------|
-| `instr_out` | 8 | ROM에서 페치한 명령 바이트 |
-
----
-
-## 🔧 4) 코드 핵심
-
-```verilog
-reg [3:0] pc;
-reg [7:0] rom [0:15];
-
-initial begin
-  rom[0] = 8'b00000011; // ADD 3
-  rom[1] = 8'b00100010; // SUB 2
-  rom[2] = 8'b01000101; // MUL 5
-  rom[3] = 8'b00000000; // NOP
-  integer i;
-  for (i=4; i<16; i=i+1) rom[i] = 8'b00000000;
-end
-
-always @(posedge clock or posedge reset) begin
-  if (reset) pc <= 4'd0;
-  else if (ena) begin
-    if (pc == 4'd3) pc <= 4'd0;  // 프로그램 끝 → 0으로 랩
-    else pc <= pc + 1;
-  end
-end
-
-assign instr_out = rom[pc];
-```
-
-특징
-- **간결한 IF 스테이지**: 분기/점프 없이 선형 실행 패턴
-- **명시적 폭 지정**: `pc`는 4‑bit로 제한, 합성 경고 방지
-- **내장 ROM**: 초기블록(`initial`)로 기본 프로그램 탑재
-
----
-
-## ⏱ 5) 타이밍/합성 메모
-- ROM은 합성 시 **LUT ROM/분산 RAM** 또는 **register init**로 매핑됩니다. (FPGA/PDK에 따라 다름)
-- `instr_out`은 **동기 1‑cycle 지연**처럼 사용하세요: `pc`가 증가한 **다음 클럭**에 해당 인스트럭션을 상위(DECODER)가 샘플링하도록 설계하면 안전합니다.
-- 프로그램 길이를 바꿀 경우 `pc == 4'd3` 비교 상수를 **끝 주소로 수정**하세요.
-
----
-
-## 🧪 6) 제공된 테스트벤치(`tb_pc`)
-
-### 테스트 항목
-- **리셋/랩어라운드**: `pc`가 0→1→2→3→0 순환하는지
-- **ENA 제어**: `ena=0`일 때 `pc`가 정지하는지
-- **동작 중 리셋**: 동작 중 `reset=1` 시 `pc=0`으로 복귀
-
-### 실행 예시
-Icarus Verilog
-```sh
-iverilog -g2012 -o pc_tb.out pc.v tb_pc.v
-vvp pc_tb.out
-gtkwave pc_wave.vcd &
-```
-
-ModelSim/Questa
-```sh
-vlog pc.v tb_pc.v
-vsim -c tb_pc -do "run -all; quit"
-```
-
-> TB는 내부 `uut.pc` 접근을 통해 현재 PC 값을 인쇄합니다. 합성 대상에서는 이 포트를 노출하지 않는 게 일반적입니다.
-
----
-
-## 🛠 7) 커스터마이즈 포인트
-1. **프로그램 길이 변경**: `pc` 비교 상수(여기서는 `4'd3`)를 원하는 끝 주소로 변경
-2. **분기/점프**: 분기 명령을 도입한다면, DECODER/CTRL에서 `pc_next`를 산출하여 `pc <= pc_next` 형태로 확장
-3. **외부 ROM로 분리**: 대규모 프로그램은 별도 `IMEM` 모듈(초기화 파일 `.hex/.mem`)을 사용
-4. **리셋 정책**: 동기 리셋으로 바꾸고 싶다면 `if (reset)` 분기를 동기식으로 이동
-5. **TinyTapeout 제약**: 게이트/플롭 수를 줄이려면 프로그램을 더 짧게 하고 ROM 초기값을 최소화
-
----
-
-## 📂 8) 디렉토리 구조(권장)
-```
-├─ rtl/
-│  └─ pc.v
-├─ sim/
-│  └─ tb_pc.v
-└─ docs/
-   └─ README_PC_FULL.md
-```
-
----
-
-**작성자:** MultiMix Tech (NAMWOO KIM)  
-**버전:** 1.0 (PC + Internal ROM)  
-**업데이트:** 2025-11-12 23:09
+   * Manual 모드에서 각 opcode별 결과가 기대와 일치
+   * DIV/MOD에서 B=0이면 결과 0 방어 로직 동작
+   * CPU 모드에서 ROM 프로그램이 순환 실행
+   * ena=0일 때 PC advance 정지, 재개 시 정상 진행
+   * UART 터미널에서 1바이트 전송이 주기적으로 관측(115200bps)
+   * busy LED가 전송 타이밍 동안만 켜짐
+  
