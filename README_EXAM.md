@@ -1,5 +1,9 @@
 # 실행 절차 (Step-by-Step)
 
+## CLOCK 설정
+   * Fclk = 12 MHz
+   * Baud = 9600 bps
+
 ## A. Manual 모드 (SW4=0)
 1. SW3(ena)=1, BTNC 눌렀다 떼서 리셋 해제
 2. 연산 선택:
