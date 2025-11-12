@@ -1,68 +1,215 @@
-# UART — 8N1 TX/RX (Parametric Baud)
+# UART_TX — UART 송신기 (8N1 고정형)
 
-> Module: `uart`  
+> Module: `UART_TX`  
 > Timescale: `1ns/1ps`  
-> Nettype: ``default_nettype none``
+> Nettype: ``default_nettype none``  
+> Design Type: **TX-only, 8N1 fixed**
 
-## 📘 Overview
-Hardware UART with separate transmitter and receiver supporting 8 data bits, no parity, 1 stop bit (8N1). Baud rate is derived from `CLK_HZ` and `BAUD` parameters via an integer divider. Includes ready/valid handshakes.
+---
 
-## 🔧 Parameters
-| Name     | Default     | Description                 |
-|----------|-------------|-----------------------------|
-| `CLK_HZ` | 50_000_000  | Input clock frequency       |
-| `BAUD`   | 115_200     | UART baud rate              |
+## 📘 1. UART 개요
+UART(Universal Asynchronous Receiver/Transmitter)는 CPU와 외부 장치 간의 **비동기 직렬 통신**을 수행하는 핵심 회로입니다.  
+송신기(TX)는 병렬 데이터를 직렬 신호로 변환하고, 수신기(RX)는 이를 다시 병렬 데이터로 복원합니다.
 
-## 🔌 I/O
-| Name      | Dir | Width | Description                           |
-|-----------|-----|-------|---------------------------------------|
-| `clk`     | In  | 1     | Clock                                 |
-| `rst_n`   | In  | 1     | Reset                                 |
-| `rx_i`    | In  | 1     | Serial RX line                        |
-| `tx_o`    | Out | 1     | Serial TX line                        |
-| `tx_data` | In  | 8     | Byte to send                          |
-| `tx_valid`| In  | 1     | Assert to start TX when `tx_ready=1`  |
-| `tx_ready`| Out | 1     | TX is idle and can accept a new byte  |
-| `rx_data` | Out | 8     | Received byte                         |
-| `rx_valid`| Out | 1     | Pulses high when a byte is received   |
+- 초기 RS-232 표준(1960년대)에서 발전
+- Intel 8250 → 16450 → 16550 (FIFO 내장형) 칩으로 진화
+- 현재는 **FPGA/SoC 내부 IP 코어** 형태로 내장
 
-## 🧪 Loopback Testbench
+---
+
+## ⚙️ 2. UART 전체 구성
+
+```
+           +--------------------------+
+           |        CPU / BUS         |
+           +-----------+--------------+
+                       |
+                       v
+              +--------+--------+
+              |   UART REGISTER |
+              +--------+--------+
+                       |
+                       v
+           +-----------+------------+
+           | Baud Generator / Clock |
+           +-----------+------------+
+                       |
+        +--------------+-------------+
+        | TX Logic     | RX Logic    |
+        | (Shift Out)  | (Shift In)  |
+        +--------------+-------------+
+                       |
+                    Serial Line
+```
+
+이 설계에서는 TX 경로만 포함되어 있습니다.  
+Start → Data bits(LSB first) → Stop 순서로 직렬화됩니다.
+
+---
+
+## 🔢 3. Baud Rate 계산
+
+UART는 내부 클럭을 Baud rate로 분주합니다.
+
+\$\$ Divider = \frac{F_{CLK}}{BAUD} \$\$
+
+예시:  
+`Fclk = 12 MHz`, `Baud = 9600 bps`  
+→ Divider = 12,000,000 / 9600 = **1250**  
+→ 코드의 `parameter CLOCK_DIV = 1250`이 이에 해당합니다.
+
+Baud 오차율은 다음으로 계산합니다:
+
+\$\$ Error(%) = \frac{|F_{CLK}/Divider - BAUD|}{BAUD} \times 100 \$\$
+
+> ⚠️ 2% 이하 오차율이면 대부분의 UART 간 통신에서 안정적입니다.
+
+---
+
+## ⏱ 4. UART 프레임 구조 (8N1)
+
+| 항목 | 비트수 | 설명 |
+|------|--------|------|
+| Start | 1 | 항상 0 |
+| Data  | 8 | LSB → MSB 순 |
+| Parity | 0 | 없음 (N) |
+| Stop | 1 | 항상 1 |
+
+총 10비트로 구성되어 있으며, 9600bps 기준 약 **1.04ms/byte** 소요됩니다.
+
+---
+
+## 🧩 5. Verilog 코드 설명
+
+```verilog
+(* keep_hierarchy *)
+module UART_TX(
+    input wire clock,      // 시스템 클럭
+    input wire reset,      // 비동기 리셋
+    input wire start,      // 송신 시작 트리거
+    input wire [7:0] data_in, // 송신할 8비트 데이터
+
+    output reg tx,         // 직렬 출력 (Idle 시 High)
+    output reg busy        // 송신 중이면 High
+);
+```
+
+### 파라미터
+| 이름 | 기본값 | 설명 |
+|------|--------|------|
+| `CLOCK_DIV` | 1250 | 12MHz → 9600bps Baud 분주기 |
+
+### 내부 레지스터
+| 이름 | 폭 | 설명 |
+|------|----|------|
+| `data_reg` | 8 | 송신 데이터 버퍼 |
+| `bit_idx` | 3 | 현재 전송 중 비트 인덱스 |
+| `clock_count` | 16 | Baud 카운터 |
+| `state` | 3 | FSM 상태 |
+
+### 상태 정의
+```verilog
+localparam IDLE  = 3'd0;
+localparam START = 3'd1;
+localparam DATA  = 3'd2;
+localparam STOP  = 3'd3;
+```
+
+### FSM 동작 요약
+
+| 상태 | TX 출력 | 동작 설명 |
+|------|----------|------------|
+| **IDLE** | 1 | 대기 상태. `start`=1이면 `data_in`을 latch하고 START로 전환 |
+| **START** | 0 | Start bit 송신 (1비트 기간 유지) |
+| **DATA** | data_reg[bit_idx] | LSB부터 순차 송신 (8비트) |
+| **STOP** | 1 | Stop bit 송신 (1비트 기간 유지 후 IDLE 복귀) |
+
+---
+
+## ⚙️ 6. 실제 동작 타이밍
+
+```
+    Bit:    S 0 1 2 3 4 5 6 7 P
+    TX : ___     _ _ _ _ _ _ _ ___
+           |Start|<-- Data 8bit -->|Stop|
+```
+
+각 비트는 `CLOCK_DIV` 주기 동안 유지됩니다.  
+즉, 12MHz/9600bps일 경우 한 비트당 약 104µs 유지됩니다.
+
+---
+
+## 🧠 7. 설계적 고려사항
+
+1. **비동기 구조** — 송신측/수신측 클럭이 다르므로 Start Bit으로 동기화 필요.  
+2. **Reset 안정화** — 초기 `tx=1`, `busy=0`으로 유지.  
+3. **오차 누적 방지** — 분수분주기(Fractional Divider) 또는 Oversampling(×8, ×16) 구조 권장.  
+4. **테스트 편의성** — 파형 확인 시 Start(0) → Data(LSB=bit0) → Stop(1) 순서 확인.  
+
+---
+
+## 🧪 8. Testbench 예시
+
 ```verilog
 `timescale 1ns/1ps
-`default_nettype none
-module tb_uart;
-  localparam CLK_HZ=1_000_000, BAUD=115200;
-  reg clk=0, rst_n=0;
-  wire tx, rx;
-  reg  [7:0] tx_data; reg tx_valid; wire tx_ready;
-  wire [7:0] rx_data; wire rx_valid;
+module tb_uart_tx;
+  reg clk=0, rst=0, start=0;
+  reg [7:0] data_in=8'h55;
+  wire tx, busy;
 
-  // loopback
-  assign rx = tx;
+  UART_TX uut(.clock(clk), .reset(rst), .start(start),
+              .data_in(data_in), .tx(tx), .busy(busy));
 
-  uart #(.CLK_HZ(CLK_HZ), .BAUD(BAUD)) dut(
-    .clk(clk), .rst_n(rst_n),
-    .rx_i(rx), .tx_o(tx),
-    .tx_data(tx_data), .tx_valid(tx_valid), .tx_ready(tx_ready),
-    .rx_data(rx_data), .rx_valid(rx_valid)
-  );
-
-  always #5 clk=~clk;
+  always #41.6 clk = ~clk; // 약 12 MHz 클럭
 
   initial begin
-    #20 rst_n=1;
-    repeat(5) @(posedge clk);
-    @(posedge clk);
-    if(tx_ready) begin tx_data=8'h55; tx_valid=1; end
-    @(posedge clk); tx_valid=0;
-    wait(rx_valid); $display("RX=0x%02h", rx_data);
-    $finish;
+    rst=1; #100; rst=0;
+    #500 start=1; #20 start=0;
+    wait(!busy);
+    $display("UART TX done.");
+    #5000 $finish;
   end
 endmodule
 ```
 
-## 📝 Notes
-- For exact baud matching, use fractional dividers or oversampling (x8/x16) on RX.
-- Synchronize the asynchronous `rx_i` line before sampling.
+---
 
-**Last Updated**: 2025-11-12 22:21
+## 🧰 9. 확장형 UART 구조 이론
+
+| 기능 | 설명 |
+|------|------|
+| **Parity 지원** | Even/Odd 선택 후 FSM에 Parity 상태 추가 |
+| **Stop Bit 가변** | FSM에 STOP2 상태 추가 (2bit Stop) |
+| **데이터 비트 가변** | `parameter DATA_BITS`로 7~9bit 설정 |
+| **Fractional Baud Generator** | 정확도 향상 위해 분수 분주기 사용 |
+| **Oversampling RX** | RX FSM은 16× Oversampling으로 Sampling 정확도 향상 |
+| **FIFO 버퍼링** | TX/RX 버퍼링으로 CPU 부하 감소 |
+
+---
+
+## ⚙️ 10. 하드웨어 구현 시 고려사항
+
+- **FPGA**: LUT 기반 FSM 및 Counter로 충분히 구현 가능  
+- **ASIC**: Power/Timing trade-off를 고려하여 Clock Gating 추가 가능  
+- **CDC**: RX 신호는 반드시 2FF 동기화 필요  
+- **Baud Drift 허용 오차**: ±3% 이내 유지 권장  
+- **검증**: Start/Stop 비트 타이밍, TX High Idle 유지 여부 확인
+
+---
+
+## 📂 11. 프로젝트 구조 예시
+
+```
+├─ rtl/
+│  └─ UART_TX.v
+├─ sim/
+│  └─ tb_uart_tx.v
+└─ docs/
+   └─ README_UART.md
+```
+
+---
+
+**작성자:** MultiMix Tech (NAMWOO KIM)  
+**버전:** 1.0 (TX Only)  
+**업데이트:** 2025-11-12 22:35
