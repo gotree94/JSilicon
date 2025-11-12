@@ -14,11 +14,18 @@
    * 예상 결과 = 25(0x19) → 터미널에 0x19 바이트 관측
    * LED 하위 7비트에 0x19의 LSBs가 보이고, busy LED(최상위 비트)가 TX 동안 켜졌다 꺼짐
 
+
+
+
 ## B. CPU 모드 (SW4=1)
 1. SW3(ena)=1, BTNC 리셋
 2. 내장 ROM 시퀀스가 자동 실행(ADD 3 → SUB 2 → MUL 5 → NOP → 루프)
 3. 각 명령의 결과 하위 8비트가 UART로 전송, LED에 결과 비트 표시
 4. SW4를 0/1 토글하며 Manual↔CPU 전환 시 UART busy가 0일 때 전환 추천(글리치 회피)
+
+
+
+
 
 ## C. Disable/Reset 동작 확인
    * SW3를 0으로 내리면 PC/FSM 정지(상태 유지) → 1로 올리면 재개
