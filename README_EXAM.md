@@ -3,7 +3,7 @@
 ---
 
 ## CLOCK 설정
-   * Fclk = 12 MHz
+   * Fclk = 12 MHz (83nsec)
    * Baud = 9600 bps
 ---
 
