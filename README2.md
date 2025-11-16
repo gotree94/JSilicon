@@ -1,3 +1,159 @@
+1. 왜 “단계 구분”이 방향을 확 열어줄 수 있냐면
+
+단계를 나누는 순간, 각 타이밍에 대해 다음 질문을 할 수 있게 됩니다:
+
+이 사이클에서 PC는 무엇을 해야 하나?
+
+이 사이클에서 ALU는 누구의 값을 가지고 있나?
+
+이 사이클에서 REG는 write를 해야 하나, 말아야 하나?
+
+이 사이클에서 UART는 “이제 보내도 되는 값”을 봐도 되나?
+
+즉, “각 사이클에 하나의 역할만 시킨다”는 규칙을 만들 수 있고,
+그 규칙이 생기면:
+
+Manual 모드에서는 어떤 단계만 사용하고,
+
+CPU 모드에서는 Fetch → Decode → Execute → WB → UART로 선형 흐름을 만들 수 있음
+
+그러면 지금처럼:
+
+ena, mode, alu_ena, decoder_write_enable, uart_busy…가 한 사이클에 서로 끼어들면서,
+
+“어느 타이밍에 무엇이 진짜인가?”가 꼬이는 상황을 많이 줄일 수 있어요.
+
+2. “가능한” 파이프라인 이미지(생각 실험용)
+
+예를 들어, **“멀티사이클 CPU”**처럼만 생각해봐도:
+
+Cycle 0 – FETCH
+
+PC 값으로 ROM에서 instr 읽어서 instr_reg에 저장
+
+Cycle 1 – DECODE
+
+instr_reg에서 opcode, operand 뽑아서
+opcode_reg, operand_reg에 저장
+
+Cycle 2 – EXECUTE
+
+R0_reg, R1_reg, operand_reg 가지고 ALU 실행
+
+결과를 alu_result_reg에 저장
+
+Cycle 3 – WRITE-BACK
+
+alu_result_reg를 R0에 쓰기
+
+Cycle 4 – UART SEND
+
+alu_result_reg를 UART에 한 번 보내기 시작
+
+이렇게 “개념적인” 5단계만 잡아도:
+
+어느 단계에서 값이 ‘확정’되는지
+
+UART는 어디 단계의 값을 써야 하는지
+
+Manual 모드는 이 중 어느 subset만 쓰면 되는지
+
+이 전체 지도가 생기죠.
+
+지금 설계의 많은 문제(A, B, C, D, E, G…)가 사실 전부
+
+“이 다섯 줄을 한 줄에 우겨 넣어버린 결과”
+
+라고 봐도 될 정도예요.
+
+3. 이 관점에서 보면 “어디가 특히 명확해질까?”
+3-1. CPU 모드 값 생성 문제
+
+지금은 operand가 ALU에 어떻게 들어가야 하는지 애매함
+
+파이프라인을 생각하면 자연스럽게:
+
+DECODE 단계: operand_reg에 저장
+
+EXECUTE 단계: ALU(a=R0, b=operand_reg)
+
+이렇게 “경로 정의”가 쉬워짐 →
+“R0+imm인지, R1+imm인지” 같은 설계 결정이 명확해짐
+
+3-2. UART와의 동기화 문제
+
+지금은 ALU와 UART가 같은 사이클 공간에서 뒤엉켜 있어서,
+
+ALU 결과가 바뀌는 순간과
+
+UART start가 올라가는 순간이 분리 안 됨
+
+파이프라인 관점에서는:
+
+EXECUTE 단계에서 alu_result_reg 확정
+
+WRITE-BACK에서 레지스터에 저장
+
+UART SEND 단계에서 alu_result_reg를 TX에 싣기 시작
+
+이렇게 하면 자연스럽게:
+
+**“반드시 계산 끝난 값만 UART로 나간다”**가 보장됨
+
+3-3. Manual / CPU 모드 공존 문제
+
+파이프라인이 없으니까 manual 모드는:
+
+“그냥 ALU에 a,b,opcode 꽂고 ena 누르면 바로 결과”
+
+CPU 모드는:
+
+“ROM→DECODER→ALU→REG→UART를 한 번에 돌리려는 중”
+
+이게 섞여 있으니 mode 전환이 항상 위험해요.
+
+반대로 파이프라인이 있으면:
+
+Manual 모드는:
+
+EXECUTE 단계 + UART SEND 단계만 따로 “직접 트리거”
+
+CPU 모드는:
+
+FETCH → … → UART SEND 까지 자동
+
+처럼 모드마다 사용하는 단계 subset을 정리할 수 있음
+→ 두 모드의 경계도 훨씬 명확해짐.
+
+4. 결론적으로 “파이프라인 단계 구분”이 해줄 수 있는 것
+
+정리하면, I-2를 먼저 설계 차원에서 정리하면:
+
+타이밍 기준점이 생김
+
+“이 값은 사이클 N에서 확정된다”를 말할 수 있음
+
+각 모듈의 책임 범위가 분리됨
+
+PC는 FETCH, DECODER는 DECODE, ALU는 EXECUTE, REG는 WB, UART는 SEND
+
+문제를 디버깅할 좌표계가 생김
+
+“지금 3단계까지는 정상인데 4단계에서 꼬였다” 같이 말할 수 있음
+
+Manual / CPU, UART, ALU, REG의 엮임을 차례대로 풀 수 있음
+
+지금은 다 동시에 얽혀 있어서, 무엇부터 고쳐야 할지 감이 안 옴
+
+그래서 “가능성만” 이야기하자면:
+
+👉 네, I-2(파이프라인 단계 구분)를 먼저 개념적으로라도 정리하면,
+전체 방향이 훨씬 명확해질 가능성이 크다
+
+“지금 있는 코드 손보는 느낌”에서
+“작은 멀티사이클 CPU를 하나 설계한다” 쪽으로 관점이 바뀌기 때문이에요.
+
+
 
 
 ## 🧠 1. 파이프라인이 없는 CPU(Non-Pipelined / Single-Cycle / Multi-Cycle)의 특징
