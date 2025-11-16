@@ -36,7 +36,7 @@
 | 항목 | 사양 |
 |------|------|
 | **아키텍처** | 8-bit RISC-style 프로세서 |
-| **클록 주파수** | 200 MHz (5ns period) |
+| **클록 주파수** | 12 MHz (검토결과 200MHz - 5ns period) |
 | **공정 기술** | FreePDK45 (45nm) |
 | **모듈 수** | 8개 (ALU, FSM, Instruction, PC, Register File, Switch, UART, Top) |
 | **게이트 수** | ~595 cells (합성 후) |
