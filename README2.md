@@ -170,7 +170,7 @@ UART start가 ALU 완료 타이밍과 전혀 관리되지 않음
 # 📌 총정리 – 현재 구조의 핵심 문제 맵
 
 | 분류	| 문제 | 
-|:---:|:---:\
+|:---:|:---:|
 | CPU 연산 경로	| operand 미사용, R0/R1 구조 불일치, 계산값 0 고정| 
 | enable 구조	| manual/CPU 간 enable 분리 없음, pipeline 동시 활성화| 
 | FSM	| ena level-based, rising-edge detection 없음, 반복 전송| 
