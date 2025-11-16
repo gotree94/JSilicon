@@ -1,5 +1,4 @@
 # JSilicon: RTL-to-GDS Design Flow Tutorial
-## 대학생을 위한 디지털 IC 설계 실습 가이드
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Technology: FreePDK45](https://img.shields.io/badge/Technology-FreePDK45-blue.svg)](https://github.com/baichen318/FreePDK45)
