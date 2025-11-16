@@ -22,7 +22,7 @@
 
 ## 🎓 프로젝트 소개
 
-**JSilicon**은 대학생들이 **RTL-to-GDS (Register Transfer Level to Graphic Data System)** 디지털 IC 설계 플로우를 직접 경험할 수 있도록 만든 교육용 프로세서 프로젝트입니다.
+**JSilicon**은 **RTL-to-GDS (Register Transfer Level to Graphic Data System)** 디지털 IC 설계 플로우를 직접 경험할 수 있도록 만든 교육용 프로세서 프로젝트입니다.
 
 ### 왜 JSilicon인가?
 
