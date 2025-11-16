@@ -291,13 +291,12 @@ assign uio_out = { alu_result[15:9], uart_tx };
 
 ## 🏛 3. 구조적으로 어떤 차이가 발생하는가?
   * 🔸 Non-Pipelined CPU
-```
+```sql
 cycle 1: fetch
 cycle 2: decode
 cycle 3: execute
 cycle 4: write-back
 cycle 5: uart-send
-
 ```
 
 * 모든 단계는 서로 시간적으로 분리되어 있어서:
@@ -308,13 +307,12 @@ cycle 5: uart-send
 ## 👉 TinyTapeout / Micro FPGA 프로젝트엔 이 구조가 적합
 
 *🔸 Pipelined CPU
-```
+```sql
 cycle 1:   IF1 - - - -
 cycle 2:   IF2 ID1 - - -
 cycle 3:   IF3 ID2 EX1 - -
 cycle 4:   IF4 ID3 EX2 MEM1 -
 cycle 5:   IF5 ID4 EX3 MEM2 WB1
-
 ```
 
 * fetch/decode/execute/write-back이 겹쳐서 실행됨
@@ -346,13 +344,12 @@ cycle 5:   IF5 ID4 EX3 MEM2 WB1
 * 같은 디자인을 clean하게 만들려면:
 
 * ✔ Non-Pipelined Multi-Cycle 구조(권장)
-```
+```sql
 cycle 1: PC -> instr_reg
 cycle 2: instr_reg -> opcode/operand_reg
 cycle 3: R0, operand_reg -> ALU -> alu_result_reg
 cycle 4: R0 <- alu_result_reg
 cycle 5: UART <- alu_result_reg
-
 ```
 
 * 각 레지스터가 pipeline stage 역할
