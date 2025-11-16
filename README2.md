@@ -31,8 +31,9 @@
 
 ## 🚀 2. 파이프라인이 있는 CPU(Pipelined CPU)의 특징
 * 가장 널리 알려진 구조가 5-stage pipeline:
+* 
 | 단계	| 설명|
-|:--:| :--:| 
+|:--:|:--:| 
 | IF	| instruction fetch| 
 | ID	| instruction decode| 
 | EX	| execute (ALU)| 
