@@ -2232,7 +2232,9 @@ ls -lh results/def/tt_um_Jsilicon.def
 cat reports/pnr/summary.rpt
 ```
 
-#### 작업 자동화
+---
+
+# 작업 자동화
 
 * 1. run_full_flow.csh - 전체 자동화 실행
 
