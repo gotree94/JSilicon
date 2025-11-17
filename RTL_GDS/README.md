@@ -1153,7 +1153,7 @@ cd ~/JSilicon2/constraints
 vi jsilicon.sdc
 ```
 
-* # SDC (Synopsys Design Constraints) 파일 생성
+* # SDC (Synopsys Design Constraints) 파일 생성 : Cadence도 동일함
 
 ```csh
 ###############################################################################
@@ -1487,7 +1487,7 @@ Hostname                           localhost
 
 **주요 확인 항목:**
 
-```bash
+```
 # 1. 타이밍 확인
 grep -A 10 "Timing" reports/synthesis/qor.rpt
 
@@ -1559,7 +1559,7 @@ cat reports/synthesis/gates.rpt | head -20
 
 #### 3-4. 타이밍 분석
 
-```bash
+```
 # 상위 10개 Critical Path 확인
 cat reports/synthesis/timing.rpt | head -100
 ```
@@ -1851,6 +1851,231 @@ puts "========================================="
 puts ""
 
 exit
+```
+
+### Final
+
+```
+cat > scripts/innovus/pnr_flow.tcl << 'EOF'
+################################################################################
+# Innovus P&R Flow Script
+# Design: tt_um_Jsilicon
+################################################################################
+
+set DESIGN_NAME "tt_um_Jsilicon"
+set PDK_ROOT $::env(PDK_ROOT)
+set PDK "sky130A"
+
+puts "=========================================="
+puts "P&R Flow for $DESIGN_NAME"
+puts "=========================================="
+
+################################################################################
+# 1. 라이브러리 설정
+################################################################################
+puts "\n1. Setting up libraries..."
+
+# Technology LEF
+set lef_files [list \
+    $PDK_ROOT/$PDK/libs.ref/sky130_fd_sc_hd/techlef/sky130_fd_sc_hd__nom.tlef \
+    $PDK_ROOT/$PDK/libs.ref/sky130_fd_sc_hd/lef/sky130_fd_sc_hd.lef \
+]
+
+# Timing libraries
+set timing_lib $PDK_ROOT/$PDK/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+
+# LEF 읽기
+foreach lef $lef_files {
+    if { [file exists $lef] } {
+        read_physical -lef $lef
+        puts "  Read LEF: $lef"
+    } else {
+        puts "Warning: LEF not found: $lef"
+    }
+}
+
+# 타이밍 라이브러리 읽기
+if { [file exists $timing_lib] } {
+    read_timing_library $timing_lib
+    puts "  Read timing lib: $timing_lib"
+} else {
+    puts "Warning: Timing library not found: $timing_lib"
+}
+
+################################################################################
+# 2. 넷리스트 읽기
+################################################################################
+puts "\n2. Reading netlist..."
+read_netlist ../../results/netlist/${DESIGN_NAME}_synth.v
+set_top_module $DESIGN_NAME
+
+################################################################################
+# 3. 디자인 초기화
+################################################################################
+puts "\n3. Initializing design..."
+init_design
+
+################################################################################
+# 4. Floorplan
+################################################################################
+puts "\n4. Creating floorplan..."
+
+# 코어 사이즈 설정 (예시: 100um x 100um)
+# 실제 사이즈는 셀 개수에 따라 조정 필요
+floorPlan -site unithd -r 1.0 0.7 10 10 10 10
+
+# I/O 배치
+setPinAssignMode -pinEditInBatch true
+assignPin
+
+################################################################################
+# 5. Power Planning
+################################################################################
+puts "\n5. Creating power grid..."
+
+# Global net 연결
+globalNetConnect VDD -type pgpin -pin VDD* -inst * -override
+globalNetConnect VSS -type pgpin -pin VSS* -inst * -override
+globalNetConnect VDD -type tiehi -inst *
+globalNetConnect VSS -type tielo -inst *
+
+# Power ring 생성
+addRing -nets {VDD VSS} -type core_rings -layer {metal5 metal6} \
+    -width 2 -spacing 1 -offset 2
+
+# Power stripe 생성
+addStripe -nets {VDD VSS} -layer metal4 -direction vertical \
+    -width 1 -spacing 5 -number_of_sets 3
+
+# Special route (power)
+sroute -connect {corePin} -nets {VDD VSS}
+
+################################################################################
+# 6. Placement
+################################################################################
+puts "\n6. Placing standard cells..."
+
+# Placement 설정
+setPlaceMode -congEffort high -timingDriven true
+
+# Standard cell placement
+place_opt_design
+
+# Pre-CTS 최적화
+optDesign -preCTS
+
+################################################################################
+# 7. Clock Tree Synthesis
+################################################################################
+puts "\n7. Building clock tree..."
+
+# 클락 정의
+create_clock -name clk -period 10.0 [get_ports clk]
+set_clock_uncertainty 0.5 [get_clocks clk]
+
+# CTS
+ccopt_design
+
+# Post-CTS 최적화
+optDesign -postCTS
+
+################################################################################
+# 8. Routing
+################################################################################
+puts "\n8. Routing design..."
+
+# Routing 설정
+setNanoRouteMode -drouteFixAntenna true
+setNanoRouteMode -droutePostRouteSwapVia true
+
+# Detail routing
+routeDesign
+
+# Post-route 최적화
+optDesign -postRoute
+
+################################################################################
+# 9. Filler 추가
+################################################################################
+puts "\n9. Adding filler cells..."
+
+setFillerMode -corePrefix FILL -core "sky130_fd_sc_hd__fill_*"
+addFiller
+
+################################################################################
+# 10. 검증
+################################################################################
+puts "\n10. Running verification..."
+
+# DRC 체크
+verifyGeometry -report ../../reports/pnr/geometry.rpt
+
+# Connectivity 체크
+verifyConnectivity -report ../../reports/pnr/connectivity.rpt
+
+# Antenna 체크
+verifyProcessAntenna -report ../../reports/pnr/antenna.rpt
+
+################################################################################
+# 11. 타이밍 분석
+################################################################################
+puts "\n11. Generating timing reports..."
+
+# Setup timing
+report_timing -max_paths 10 -nworst 1 -delay_type max \
+    > ../../reports/pnr/timing_setup.rpt
+
+# Hold timing
+report_timing -max_paths 10 -nworst 1 -delay_type min \
+    > ../../reports/pnr/timing_hold.rpt
+
+# Summary
+report_timing_summary > ../../reports/pnr/timing_summary.rpt
+
+################################################################################
+# 12. 면적 리포트
+################################################################################
+puts "\n12. Generating area reports..."
+
+report_area > ../../reports/pnr/area.rpt
+report_power > ../../reports/pnr/power.rpt
+
+################################################################################
+# 13. 출력 파일 저장
+################################################################################
+puts "\n13. Saving outputs..."
+
+# DEF 출력
+defOut -floorplan -netlist -routing ../../results/def/${DESIGN_NAME}.def
+
+# Final netlist 출력
+saveNetlist ../../results/netlist/${DESIGN_NAME}_final.v
+
+# 디자인 데이터베이스 저장
+saveDesign ${DESIGN_NAME}_final.enc
+
+# Summary 리포트
+summaryReport -outFile ../../reports/pnr/summary.rpt
+
+################################################################################
+# 완료
+################################################################################
+puts "\n=========================================="
+puts "P&R Flow Completed!"
+puts "=========================================="
+puts "\nGenerated files:"
+puts "  DEF: results/def/${DESIGN_NAME}.def"
+puts "  Netlist: results/netlist/${DESIGN_NAME}_final.v"
+puts "  Reports: reports/pnr/"
+puts "\nNext: Check timing reports and run STA"
+puts "=========================================="
+
+# GUI 모드면 디자인 표시
+if { [info exists gui_mode] && $gui_mode == 1 } {
+    fit
+} else {
+    exit
+}
 ```
 
 ```
