@@ -457,43 +457,6 @@ END AND2X1
 
 #### 0-4. 환경 변수 설정
 
-```bash
-# 환경 설정 파일 생성
-cat > ~/JSilicon2/setup_env.sh << 'EOF'
-vi ~/JSilicon2/setup_env.sh
-#!/bin/bash
-# JSilicon2 환경 설정
-
-# Cadence 툴 경로 (실제 경로로 수정 필요)
-export CADENCE_ROOT=/tools/cadence
-export GENUS_HOME=$CADENCE_ROOT/GENUS231
-export INNOVUS_HOME=$CADENCE_ROOT/INNOVUS231
-
-# PATH 추가
-export PATH=$GENUS_HOME/bin:$INNOVUS_HOME/bin:$PATH
-
-# 라이선스 서버 (실제 서버로 수정)
-export CDS_LIC_FILE=5280@license.server.edu
-
-# OA_HOME 제거 (Innovus 오류 방지)
-unset OA_HOME
-
-# 프로젝트 루트
-export JSILICON_ROOT=$HOME/JSilicon2
-
-echo "✓ JSilicon2 환경 설정 완료"
-echo "  GENUS: $GENUS_HOME"
-echo "  INNOVUS: $INNOVUS_HOME"
-echo "  PROJECT: $JSILICON_ROOT"
-EOF
-
-# 실행 권한 부여
-chmod +x ~/JSilicon2/setup_env.sh
-
-# 환경 로드
-source ~/JSilicon2/setup_env.sh
-```
-
 ```cshrc
 #!/bin/csh
 ###############################################################################
@@ -605,6 +568,32 @@ echo ""
 ###############################################################################
 ```
 
+```
+[student001@gjchamber ~/JSilicon2]$ vi ~/JSilicon2/setup_env.sh
+[student001@gjchamber ~/JSilicon2]$ chmod +x ~/JSilicon2/setup_env.sh
+[student001@gjchamber ~/JSilicon2]$ ~/JSilicon2/setup_env.sh
+
+==========================================
+ JSilicon2 환경 설정 완료 (C Shell)
+==========================================
+  CADENCE_ROOT: /tools/cadence/DDI231
+  GENUS:        /tools/cadence/DDI231/GENUS231
+  INNOVUS:      /tools/cadence/DDI231/INNOVUS231
+  PROJECT:      /home/student001/JSilicon2
+  LICENSE:      5280@license.gjchamber.ac.kr
+==========================================
+
+✓ Genus found at /tools/cadence/DDI231/GENUS231
+  ✓ genus executable found
+✓ Innovus found at /tools/cadence/DDI231/INNOVUS231
+  ✓ innovus executable found
+
+사용 방법:
+  1. 환경 로드:  source ~/JSilicon2/setup_env.csh
+  2. Genus 실행: genus
+  3. Innovus 실행: innovus
+
+```
 
 **환경 변수 확인:**
 ```bash
@@ -612,9 +601,6 @@ which genus
 which innovus
 echo $JSILICON_ROOT
 ```
-
-
-
 
 #### 0-5. 디렉토리 구조 생성
 
