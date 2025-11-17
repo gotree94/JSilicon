@@ -573,6 +573,99 @@ cat src/jsilicon.v | grep -A 20 "module tt_um_Jsilicon"
 grep -n "^\s*[a-z_]*\s*[a-z_]*_inst\s*(" src/jsilicon.v
 ```
 
+```
+#!/bin/csh
+###############################################################################
+# Verilog 계층 구조 출력 스크립트 (C Shell)
+# show_hierarchy.csh
+###############################################################################
+
+set VERILOG_FILE = "src/jsilicon.v"
+
+# 파일 존재 확인
+if ( ! -f $VERILOG_FILE ) then
+    echo "Error: $VERILOG_FILE not found"
+    echo "Current directory: `pwd`"
+    exit 1
+endif
+
+echo "=========================================="
+echo " JSilicon 모듈 계층 구조"
+echo "=========================================="
+echo ""
+
+# Top 모듈 찾기
+set TOP_MODULE = `grep "^module" $VERILOG_FILE | head -1 | awk '{print $2}' | sed 's/(.*$//'`
+
+if ( "$TOP_MODULE" == "" ) then
+    set TOP_MODULE = "tt_um_Jsilicon"
+endif
+
+echo "$TOP_MODULE (Top)"
+
+# 인스턴스 찾기 및 출력
+set instances = `grep "_inst *(" $VERILOG_FILE | wc -l`
+
+if ( $instances == 0 ) then
+    echo "  (No instances found)"
+else
+    # 임시 파일 생성
+    set tmpfile = /tmp/verilog_inst_$$.tmp
+    grep "_inst *(" $VERILOG_FILE | sed 's/^[ \t]*//' > $tmpfile
+    
+    set count = 1
+    foreach line ( "`cat $tmpfile`" )
+        set module = `echo $line | awk '{print $1}'`
+        set inst = `echo $line | awk '{print $2}' | sed 's/(.*$//'`
+        
+        if ( $count == $instances ) then
+            echo "  └── $inst ($module)"
+        else
+            echo "  ├── $inst ($module)"
+        endif
+        
+        @ count++
+    end
+    
+    rm -f $tmpfile
+endif
+
+echo ""
+echo "Total instances: $instances"
+echo "=========================================="
+```
+
+```
+#!/bin/csh
+###############################################################################
+# 간단한 Verilog 인스턴스 출력 (C Shell)
+# list_instances.csh
+###############################################################################
+
+set VERILOG_FILE = "src/jsilicon.v"
+
+if ( ! -f $VERILOG_FILE ) then
+    echo "Error: $VERILOG_FILE not found"
+    exit 1
+endif
+
+echo "=========================================="
+echo " JSilicon Module Instances"
+echo "=========================================="
+echo ""
+
+# 인스턴스 찾기
+echo "Instances found:"
+echo ""
+
+grep "_inst *(" $VERILOG_FILE | sed 's/^[ \t]*//' | awk '{printf "  %-20s <- %s\n", $2, $1}' | sed 's/(.*$//'
+
+echo ""
+echo "Total: `grep -c '_inst *(' $VERILOG_FILE` instances"
+echo "=========================================="
+```
+
+
 **계층 구조:**
 ```
 tt_um_Jsilicon (Top)
