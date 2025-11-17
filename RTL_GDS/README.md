@@ -337,6 +337,7 @@ tech/lef/gscl45nm.lef  ~64 KB
 ```bash
 # 환경 설정 파일 생성
 cat > ~/JSilicon2/setup_env.sh << 'EOF'
+vi ~/JSilicon2/setup_env.sh
 #!/bin/bash
 # JSilicon2 환경 설정
 
@@ -489,6 +490,7 @@ cd ~/JSilicon2/constraints
 
 # SDC (Synopsys Design Constraints) 파일 생성
 cat > jsilicon.sdc << 'EOF'
+vi jsilicon.sdc
 ###############################################################################
 # JSilicon Timing Constraints
 # Target: 200 MHz (5ns period)
@@ -567,6 +569,7 @@ mkdir -p genus
 
 # Genus 합성 스크립트
 cat > genus/synthesis.tcl << 'EOF'
+vi genus/synthesis.tcl
 ###############################################################################
 # Genus Synthesis Script for JSilicon
 # FreePDK45 Technology
