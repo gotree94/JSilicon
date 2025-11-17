@@ -329,6 +329,9 @@ tech/lib/gscl45nm.lib  ~257 KB
 tech/lef/gscl45nm.lef  ~64 KB
 ```
 
+* Liberty (.lib)  ← 타이밍, 전력 (논리적)
+* LEF (.lef)      ← 물리적 정보 (레이아웃)
+
 #### 0-4. 환경 변수 설정
 
 ```bash
