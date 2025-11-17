@@ -266,6 +266,15 @@ JSilicon2/
 
 ## 📖 상세 실습 가이드
 
+```
+vi ~/.cshrc
+
+setenv PATH /tools/cadence/XCELIUMMAIN2409/tools/bin:${PATH}
+setenv PATH /home/student001/miniconda3/bin:${PATH}
+setenv PATH /tools/cadence/DDI231/GENUS231/bin:${PATH}
+setenv PATH /tools/cadence/DDI231/INNOVUS231/bin:${PATH}
+```
+
 ### Step 0: 프로젝트 설정
 
 #### 0-1. 저장소 클론
