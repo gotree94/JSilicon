@@ -325,12 +325,12 @@ ls -lh tech/lef/
 
 **예상 출력:**
 ```
-tech/lib/gscl45nm.lib  ~257 KB
-tech/lef/gscl45nm.lef  ~64 KB
+tech/lef/gscl45nm.lef  (예상 크기 : ~64 KB)
+tech/lib/gscl45nm.lib  (예상 크기 : ~257 KB)
 ```
 
-* Liberty (.lib)  ← 타이밍, 전력 (논리적)
 * LEF (.lef)      ← 물리적 정보 (레이아웃)
+* Liberty (.lib)  ← 타이밍, 전력 (논리적)
 
 * 두 파일의 관계
 
@@ -345,7 +345,7 @@ tech/lef/gscl45nm.lef  ~64 KB
   * P&R: LEF로 물리 배치/배선
   * STA: LIB로 타이밍 검증
 
-#### *gscl45nm.lef (Library Exchange Format)
+#### * gscl45nm.lef (Library Exchange Format)
 * LEF 파일은 물리적 레이아웃 정보를 담고 있습니다. Place & Route 툴에서 사용됩니다.
 * 📌 Metal Layer 예시 (metal1)
 ```lef
@@ -392,7 +392,7 @@ END AND2X1
    * PIN A RECT: 입력 핀 A의 metal1 상의 좌표 (µm)
    * Place & Route 시 이 좌표로 net을 연결합니다
 
-#### *gscl45nm.lib (Liberty Format)
+#### * gscl45nm.lib (Liberty Format)
 * LIB 파일은 타이밍, 전력, 기능 정보를 담고 있습니다. Synthesis와 STA에서 사용됩니다.
 * 📌 라이브러리 공통 정보
 ```lib
