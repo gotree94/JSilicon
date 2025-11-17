@@ -694,6 +694,7 @@ tt_um_Jsilicon (Top)
 #### 2-1. SDC 파일 생성
 
 ```bash
+bash
 cd ~/JSilicon2/constraints
 
 # SDC (Synopsys Design Constraints) 파일 생성
@@ -772,6 +773,7 @@ Available Time:      1.5 ns (for logic delay)
 #### 3-1. 합성 스크립트 생성
 
 ```bash
+bash
 cd ~/JSilicon2/scripts
 mkdir -p genus
 
