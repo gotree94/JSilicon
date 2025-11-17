@@ -1853,10 +1853,9 @@ puts ""
 exit
 ```
 
-### Final
+### Final (scripts/innovus/pnr_flow.tcl)
 
 ```
-cat > scripts/innovus/pnr_flow.tcl << 'EOF'
 ################################################################################
 # Innovus P&R Flow Script
 # Design: tt_um_Jsilicon
