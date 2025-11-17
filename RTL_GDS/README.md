@@ -371,12 +371,127 @@ chmod +x ~/JSilicon2/setup_env.sh
 source ~/JSilicon2/setup_env.sh
 ```
 
+```cshrc
+#!/bin/csh
+###############################################################################
+# JSilicon2 환경 설정 파일 (C Shell / tcsh 용)
+# Cadence Tools Environment Setup for C Shell
+###############################################################################
+
+#==============================================================================
+# 1. Cadence 툴 경로 설정
+#==============================================================================
+# ⚠️ 중요: 실제 환경에 맞게 아래 경로를 수정하세요!
+
+setenv CADENCE_ROOT /home/cad/cadence
+
+#==============================================================================
+# 2. Genus (논리 합성 툴)
+#==============================================================================
+setenv GENUS_HOME ${CADENCE_ROOT}/GENUS231
+
+# 다른 버전 예시:
+# setenv GENUS_HOME ${CADENCE_ROOT}/GENUS221
+# setenv GENUS_HOME ${CADENCE_ROOT}/GENUS201
+
+#==============================================================================
+# 3. Innovus (P&R 툴)
+#==============================================================================
+setenv INNOVUS_HOME ${CADENCE_ROOT}/INNOVUS231
+
+# 다른 버전 예시:
+# setenv INNOVUS_HOME ${CADENCE_ROOT}/INNOVUS221
+# setenv INNOVUS_HOME ${CADENCE_ROOT}/INNOVUS201
+
+#==============================================================================
+# 4. PATH 환경 변수 추가
+#==============================================================================
+setenv PATH ${GENUS_HOME}/bin:${INNOVUS_HOME}/bin:${PATH}
+
+#==============================================================================
+# 5. 라이선스 서버 설정
+#==============================================================================
+# ⚠️ 중요: 실제 라이선스 서버 정보로 수정하세요!
+
+setenv CDS_LIC_FILE 5280@license.gjchamber.ac.kr
+
+# 여러 라이선스 서버:
+# setenv CDS_LIC_FILE 5280@server1.edu:5280@server2.edu
+
+#==============================================================================
+# 6. OA_HOME 제거
+#==============================================================================
+unsetenv OA_HOME
+
+#==============================================================================
+# 7. 프로젝트 루트
+#==============================================================================
+setenv JSILICON_ROOT ${HOME}/JSilicon2
+
+#==============================================================================
+# 8. 확인 메시지
+#==============================================================================
+echo ""
+echo "=========================================="
+echo " JSilicon2 환경 설정 완료 (C Shell)"
+echo "=========================================="
+echo "  CADENCE_ROOT: ${CADENCE_ROOT}"
+echo "  GENUS:        ${GENUS_HOME}"
+echo "  INNOVUS:      ${INNOVUS_HOME}"
+echo "  PROJECT:      ${JSILICON_ROOT}"
+echo "  LICENSE:      ${CDS_LIC_FILE}"
+echo "=========================================="
+echo ""
+
+#==============================================================================
+# 9. 툴 존재 확인
+#==============================================================================
+if ( -d ${GENUS_HOME} ) then
+    echo "✓ Genus found at ${GENUS_HOME}"
+    if ( -x ${GENUS_HOME}/bin/genus ) then
+        echo "  ✓ genus executable found"
+    else
+        echo "  ⚠ genus executable not found"
+    endif
+else
+    echo "✗ Genus NOT found at ${GENUS_HOME}"
+    echo "  → 경로를 확인하고 수정하세요!"
+endif
+
+if ( -d ${INNOVUS_HOME} ) then
+    echo "✓ Innovus found at ${INNOVUS_HOME}"
+    if ( -x ${INNOVUS_HOME}/bin/innovus ) then
+        echo "  ✓ innovus executable found"
+    else
+        echo "  ⚠ innovus executable not found"
+    endif
+else
+    echo "✗ Innovus NOT found at ${INNOVUS_HOME}"
+    echo "  → 경로를 확인하고 수정하세요!"
+endif
+
+echo ""
+echo "사용 방법:"
+echo "  1. 환경 로드:  source ~/JSilicon2/setup_env.csh"
+echo "  2. Genus 실행: genus"
+echo "  3. Innovus 실행: innovus"
+echo ""
+
+###############################################################################
+# End of setup_env.csh
+###############################################################################
+```
+
+
 **환경 변수 확인:**
 ```bash
 which genus
 which innovus
 echo $JSILICON_ROOT
 ```
+
+
+
 
 #### 0-5. 디렉토리 구조 생성
 
