@@ -574,6 +574,14 @@ grep -n "^\s*[a-z_]*\s*[a-z_]*_inst\s*(" src/jsilicon.v
 ```
 
 ```
+echo "tt_um_Jsilicon (Top)"
+grep "_inst *(" src/jsilicon.v | \
+    sed 's/^[ \t]*//' | \
+    awk '{printf "  ├── %s (%s)\n", $2, $1}' | \
+    sed '$ s/├──/└──/'
+```
+
+```
 #!/bin/csh
 ###############################################################################
 # JSilicon 모듈 완전 분석 (간단 버전)
