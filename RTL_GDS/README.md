@@ -332,6 +332,19 @@ tech/lef/gscl45nm.lef  ~64 KB
 * Liberty (.lib)  ← 타이밍, 전력 (논리적)
 * LEF (.lef)      ← 물리적 정보 (레이아웃)
 
+* 두 파일의 관계
+| 항목 | LEF | LIB |
+|:----:|:----:|:----:| 
+| 용도 | Physical Design | Logic Synthesis & STA|
+| 정보 | 셀 크기, 핀 위치, 금속층 | 타이밍, 전력, 논리 기능|
+| 툴| Innovus, ICC2 | Genus, DC, PrimeTime| 
+
+* 워크플로우:
+  * Synthesis: LIB로 논리 최적화 → netlist 생성
+  * P&R: LEF로 물리 배치/배선
+  * STA: LIB로 타이밍 검증
+
+
 #### 0-4. 환경 변수 설정
 
 ```bash
