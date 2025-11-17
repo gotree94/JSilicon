@@ -845,6 +845,11 @@ Available Time:      1.5 ns (for logic delay)
 
 #### 3-1. 합성 스크립트 생성
 
+```
+printenv | egrep 'CDS|LM_LICENSE'
+```
+
+
 ```bash
 bash
 cd ~/JSilicon2/scripts
