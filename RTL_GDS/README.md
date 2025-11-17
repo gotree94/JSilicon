@@ -333,6 +333,7 @@ tech/lef/gscl45nm.lef  ~64 KB
 * LEF (.lef)      ← 물리적 정보 (레이아웃)
 
 * 두 파일의 관계
+
 | 항목 | LEF | LIB |
 |:----:|:----:|:----:| 
 | 용도 | Physical Design | Logic Synthesis & STA|
