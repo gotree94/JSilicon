@@ -457,7 +457,11 @@ END AND2X1
 
 #### 0-4. 환경 변수 설정
 
-```cshrc
+```csh
+[student001@gjchamber ~/JSilicon2]$ vi ~/JSilicon2/setup_env.sh
+```
+
+```csh
 #!/bin/csh
 ###############################################################################
 # JSilicon2 환경 설정 파일 (C Shell / tcsh 용)
@@ -568,8 +572,8 @@ echo ""
 ###############################################################################
 ```
 
-```
-[student001@gjchamber ~/JSilicon2]$ vi ~/JSilicon2/setup_env.sh
+**환경 변수 확인:**
+```csh
 [student001@gjchamber ~/JSilicon2]$ chmod +x ~/JSilicon2/setup_env.sh
 [student001@gjchamber ~/JSilicon2]$ ~/JSilicon2/setup_env.sh
 
@@ -592,26 +596,232 @@ echo ""
   1. 환경 로드:  source ~/JSilicon2/setup_env.csh
   2. Genus 실행: genus
   3. Innovus 실행: innovus
-
-```
-
-**환경 변수 확인:**
-```bash
-which genus
-which innovus
-echo $JSILICON_ROOT
 ```
 
 #### 0-5. 디렉토리 구조 생성
 
-```bash
+```csh
 cd ~/JSilicon2
 
 # 자동 생성 스크립트
 mkdir -p {work/{synthesis,pnr,sta},results/{netlist,def,gds,timing},reports/{synthesis,pnr,sta},constraints}
+```
 
+
+```
+# 확인용 프로그램 만들기 : Centos tree 설치를 못해서(Admin 계정 필요)
+vi tree.sh
+```
+
+```
+#!/bin/bash
+
+# tree 명령어와 유사한 기능을 하는 스크립트
+# 사용법: ./tree.sh [디렉토리] [깊이]
+
+# 색상 정의
+COLOR_DIR='\033[1;34m'      # 파란색 (디렉토리)
+COLOR_EXEC='\033[1;32m'     # 초록색 (실행파일)
+COLOR_LINK='\033[1;36m'     # 청록색 (심볼릭 링크)
+COLOR_RESET='\033[0m'       # 색상 리셋
+
+# 전역 변수
+total_dirs=0
+total_files=0
+declare -A visited_inodes  # 방문한 inode 추적 (순환 참조 방지)
+
+# 파일 타입에 따른 색상 반환
+get_color() {
+    local path="$1"
+    
+    if [ -L "$path" ]; then
+        echo -e "${COLOR_LINK}"
+    elif [ -d "$path" ]; then
+        echo -e "${COLOR_DIR}"
+    elif [ -x "$path" ]; then
+        echo -e "${COLOR_EXEC}"
+    else
+        echo -e "${COLOR_RESET}"
+    fi
+}
+
+# 디렉토리 트리 출력 함수
+print_tree() {
+    local dir="$1"
+    local prefix="$2"
+    local max_depth="$3"
+    local current_depth="$4"
+    
+    # 최대 깊이 체크
+    if [ -n "$max_depth" ] && [ "$current_depth" -ge "$max_depth" ]; then
+        return
+    fi
+    
+    # 디렉토리 접근 권한 체크
+    if [ ! -r "$dir" ]; then
+        echo "${prefix}[권한 없음]"
+        return
+    fi
+    
+    # inode 가져오기 (순환 참조 방지)
+    local inode=$(stat -c '%i' "$dir" 2>/dev/null)
+    if [ -n "$inode" ] && [ -n "${visited_inodes[$inode]}" ]; then
+        return  # 이미 방문한 디렉토리
+    fi
+    visited_inodes[$inode]=1
+    
+    # 파일 목록 가져오기 (숨김 파일 포함)
+    local items=()
+    while IFS= read -r -d '' item; do
+        items+=("$(basename "$item")")
+    done < <(find "$dir" -mindepth 1 -maxdepth 1 -print0 2>/dev/null | sort -z)
+    
+    local count=${#items[@]}
+    
+    # 각 항목 처리
+    for ((i=0; i<count; i++)); do
+        local item="${items[$i]}"
+        local path="$dir/$item"
+        local is_last=false
+        
+        # 마지막 항목인지 확인
+        if [ $i -eq $((count-1)) ]; then
+            is_last=true
+        fi
+        
+        # 트리 구조 문자
+        if $is_last; then
+            local branch="└── "
+            local extension="    "
+        else
+            local branch="├── "
+            local extension="│   "
+        fi
+        
+        # 색상 적용
+        local color=$(get_color "$path")
+        
+        # 심볼릭 링크 처리
+        if [ -L "$path" ]; then
+            local target=$(readlink "$path")
+            echo -e "${prefix}${branch}${color}${item}${COLOR_RESET} -> ${target}"
+            ((total_files++))
+        # 디렉토리 처리
+        elif [ -d "$path" ]; then
+            echo -e "${prefix}${branch}${color}${item}/${COLOR_RESET}"
+            ((total_dirs++))
+            # 재귀 호출
+            print_tree "$path" "${prefix}${extension}" "$max_depth" $((current_depth+1))
+        # 일반 파일 처리
+        else
+            echo -e "${prefix}${branch}${color}${item}${COLOR_RESET}"
+            ((total_files++))
+        fi
+    done
+}
+
+# 사용법 출력
+usage() {
+    echo "사용법: $0 [디렉토리] [옵션]"
+    echo ""
+    echo "옵션:"
+    echo "  -L [깊이]    최대 디렉토리 깊이 지정"
+    echo "  -d           디렉토리만 표시"
+    echo "  -a           숨김 파일 포함 (기본값)"
+    echo "  -h, --help   도움말 표시"
+    echo ""
+    echo "예제:"
+    echo "  $0                    # 현재 디렉토리"
+    echo "  $0 /home/user         # 특정 디렉토리"
+    echo "  $0 /home/user -L 2    # 깊이 2까지만"
+    exit 1
+}
+
+# 메인 실행 부분
+main() {
+    local target_dir="."
+    local max_depth=""
+    local dir_only=false
+    
+    # 인자 파싱
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -h|--help)
+                usage
+                ;;
+            -L)
+                shift
+                max_depth="$1"
+                if ! [[ "$max_depth" =~ ^[0-9]+$ ]]; then
+                    echo "오류: 깊이는 숫자여야 합니다."
+                    exit 1
+                fi
+                ;;
+            -d)
+                dir_only=true
+                ;;
+            -a)
+                # 이미 기본값이므로 무시
+                ;;
+            -*)
+                echo "알 수 없는 옵션: $1"
+                usage
+                ;;
+            *)
+                target_dir="$1"
+                ;;
+        esac
+        shift
+    done
+    
+    # 디렉토리 존재 확인
+    if [ ! -d "$target_dir" ]; then
+        echo "오류: '$target_dir'는 디렉토리가 아닙니다."
+        exit 1
+    fi
+    
+    # 절대 경로로 변환
+    target_dir=$(cd "$target_dir" && pwd)
+    
+    # 루트 디렉토리 출력
+    echo -e "${COLOR_DIR}${target_dir}/${COLOR_RESET}"
+    
+    # 트리 출력
+    print_tree "$target_dir" "" "$max_depth" 0
+    
+    # 통계 출력
+    echo ""
+    echo "$total_dirs directories, $total_files files"
+}
+
+# 스크립트 실행
+main "$@"
+```
+
+```
 # 확인
-tree -L 2
+[student001@gjchamber ~]$ ./tree.sh JSilicon2
+/home/student001/JSilicon2/
+├── constraints/
+├── reports/
+│   ├── pnr/
+│   ├── sta/
+│   ├── sta/
+│   └── synthesis/
+│   ├── sta/
+│   └── synthesis/
+├── sim/
+│   ├── tb_alu.v
+│   ├── tb_decoder.v
+│   ├── tb_fsm.v
+│   ├── tb_jsilicon_top.v
+│   ├── tb_pc.v
+│   ├── tb_reg.v
+│   ├── tb_switch.v
+│   └── tb_uart.v
+
+9 directories, 8 files
+
 ```
 
 ---
@@ -620,52 +830,83 @@ tree -L 2
 
 #### 1-1. RTL 파일 확인
 
-```bash
+```csh
 cd ~/JSilicon2/src
 
 # 파일 목록 및 크기
 ls -lh *.v
 
 # 각 파일의 모듈명 확인
-for f in *.v; do
+foreach f (*.v)
     echo "=== $f ==="
     grep "^module" $f
     echo ""
-done
+end
 ```
 
-**예상 출력:**
+**출력:**
 ```
+[student001@gjchamber src]$ foreach f (*.v)
+foreach?     echo "=== $f ==="
+foreach?     grep "^module" $f
+foreach?     echo ""
+foreach? end
 === alu.v ===
-module alu(
+module ALU(
 
 === fsm.v ===
-module fsm(
+module FSM (
 
 === inst.v ===
-module inst(
-
-=== pc.v ===
-module pc(
-
-=== regfile.v ===
-module regfile(
-
-=== switch.v ===
-module switch(
-
-=== uart.v ===
-module uart(
+module DECODER (
 
 === jsilicon.v ===
 module tt_um_Jsilicon(
+
+=== pc.v ===
+module PC (
+
+=== regfile.v ===
+module REG (
+
+=== switch.v ===
+module SWITCH (
+
+=== uart.v ===
+module UART_TX(
+
 ```
 
 #### 1-2. Top 모듈 분석
 
-```bash
+```csh
 # Top 모듈 인터페이스 확인
+cd ~/JSilicon2/
+
 cat src/jsilicon.v | grep -A 20 "module tt_um_Jsilicon"
+
+module tt_um_Jsilicon(
+    // Tinytapeout 요구 변수명으로 수정
+    input wire clk,
+    input wire rst_n,
+
+    // 사용자 입력 기능 추가
+    input wire [7:0] ui_in,
+    input wire [7:0] uio_in,
+
+    // Enable Input 추가
+    input wire ena,
+
+    // 출력핀 재지정
+    output wire [7:0] uio_oe,
+
+    // 사용자 출력 추가
+    output wire [7:0] uo_out,
+    output wire [7:0] uio_out
+    );
+
+    // 초기화 동기화
+
 ```
 
 **주요 포트:**
@@ -677,17 +918,8 @@ cat src/jsilicon.v | grep -A 20 "module tt_um_Jsilicon"
 
 #### 1-3. 모듈 계층 구조 확인
 
-```bash
-# 인스턴스 확인
-grep -n "^\s*[a-z_]*\s*[a-z_]*_inst\s*(" src/jsilicon.v
 ```
-
-```
-echo "tt_um_Jsilicon (Top)"
-grep "_inst *(" src/jsilicon.v | \
-    sed 's/^[ \t]*//' | \
-    awk '{printf "  ├── %s (%s)\n", $2, $1}' | \
-    sed '$ s/├──/└──/'
+vi dishi
 ```
 
 ```
@@ -810,15 +1042,92 @@ echo "=========================================="
 
 
 **계층 구조:**
+* _inst를 찾아서 계측을 확인하기 때문에 일부 코드에서 수정이 필요.
+   * jsilicon.v
+   * fsm.v
+
 ```
+[student001@gjchamber ~/JSilicon2]$ ./dishi
+==========================================
+ JSilicon 모듈 분석
+==========================================
+
+1. Verilog 파일 목록:
+
+  [1] alu.v
+  [2] fsm.v
+  [3] inst.v
+  [4] jsilicon.v
+  [5] pc.v
+  [6] regfile.v
+  [7] switch.v
+  [8] uart.v
+
+총 8 개 파일
+
+==========================================
+2. 모듈별 상세 정보
+==========================================
+
+파일: alu.v
+모듈: ALU
+인스턴스: 없음 (Leaf 모듈)
+
+파일: fsm.v
+모듈: FSM
+인스턴스 (2):
+  - alu_inst             <- ALU
+  - uart_inst
+
+파일: inst.v
+모듈: DECODER
+인스턴스: 없음 (Leaf 모듈)
+
+파일: jsilicon.v
+모듈: tt_um_Jsilicon
+인스턴스 (5):
+  - pc_inst              <- PC
+  - dec_inst             <- DECODER
+  - reg_inst             <- REG
+  - switch_inst          <- SWITCH
+  - core_inst            <- FSM
+
+파일: pc.v
+모듈: PC
+인스턴스: 없음 (Leaf 모듈)
+
+파일: regfile.v
+모듈: REG
+인스턴스: 없음 (Leaf 모듈)
+
+파일: switch.v
+모듈: SWITCH
+인스턴스: 없음 (Leaf 모듈)
+
+파일: uart.v
+모듈: UART_TX
+인스턴스: 없음 (Leaf 모듈)
+
+==========================================
+3. Top 모듈 계층 구조
+==========================================
+
 tt_um_Jsilicon (Top)
-  ├── pc_inst (PC)
-  ├── inst_inst (Instruction Decoder)
-  ├── regfile_inst (Register File)
-  ├── alu_inst (ALU)
-  ├── fsm_inst (FSM)
-  ├── switch_inst (Switch)
-  └── uart_inst (UART)
+
+Level 1 인스턴스:
+  ├── pc_inst              <- PC
+  ├── dec_inst             <- DECODER
+  ├── reg_inst             <- REG
+  ├── switch_inst          <- SWITCH
+  └── core_inst            <- FSM
+
+Level 2+ 인스턴스:
+
+  FSM 의 하위 인스턴스:
+    ├── alu_inst             <- ALU
+    └── uart_inst(           <- UART_TX
+
+==========================================
 ```
 
 #### 1-4. RTL 코드 리뷰 포인트
@@ -836,13 +1145,17 @@ tt_um_Jsilicon (Top)
 
 #### 2-1. SDC 파일 생성
 
-```bash
-bash
+```
 cd ~/JSilicon2/constraints
+```
 
-# SDC (Synopsys Design Constraints) 파일 생성
-cat > jsilicon.sdc << 'EOF'
+```
 vi jsilicon.sdc
+```
+
+* # SDC (Synopsys Design Constraints) 파일 생성
+
+```csh
 ###############################################################################
 # JSilicon Timing Constraints
 # Target: 200 MHz (5ns period)
@@ -884,50 +1197,10 @@ set_load 0.05 [all_outputs]
 ###############################################################################
 # End of constraints
 ###############################################################################
-EOF
 
 # 확인
 cat jsilicon.sdc
 ```
-
-```
-#csh
-[student001@gjchamber constraints]$
-[student001@gjchamber constraints]$ vi jsilicon.sdc
-################################################################################
-# JSilicon Design Constraints
-# FreePDK45 - 45nm Technology
-################################################################################
-
-# Clock Definition (200MHz for FreePDK45)
-create_clock -name clk -period 5.0 [get_ports clk]
-set_clock_uncertainty 0.5 [get_clocks clk]
-set_clock_transition 0.1 [get_clocks clk]
-
-# Reset
-set_false_path -from [get_ports rst_n]
-
-# Input Delays (30% of clock period)
-set_input_delay -clock clk -max 1.5 [all_inputs]
-set_input_delay -clock clk -min 0.5 [all_inputs]
-
-# Output Delays
-set_output_delay -clock clk -max 1.5 [all_outputs]
-set_output_delay -clock clk -min 0.5 [all_outputs]
-
-# Load
-set_load 0.01 [all_outputs]
-
-# Max Fanout
-set_max_fanout 16 [current_design]
-
-# Max Transition
-set_max_transition 0.5 [current_design]
-
-# Design Rules
-set_max_area 0
-```
-
 
 #### 2-2. SDC 파일 설명
 
@@ -954,19 +1227,39 @@ Available Time:      1.5 ns (for logic delay)
 
 #### 3-1. 합성 스크립트 생성
 
+* 라이센스 확인
+
 ```
 printenv | egrep 'CDS|LM_LICENSE'
 ```
 
+* 실행 결과
 
-```bash
-bash
+```
+CDS_LIC_FILE=5280@10.10.20.247
+LM_LICENSE_FILE=5280@10.10.20.247
+CDS_LIC_ONLY=1
+CDS_ROOT=/tools/cadence
+CDS_INST_DIR=/tools/cadence/IC618
+CDSHOME=/tools/cadence/IC618
+CDS_Netlisting_Mode=Analog
+CDS_AUTO_64BIT_ALL=
+CDS_PALETTE_TYPE=MultiAssistance
+```
+
+```
+mkdir ~/JSilicon2/scripts
 cd ~/JSilicon2/scripts
 mkdir -p genus
+```
 
-# Genus 합성 스크립트
-cat > genus/synthesis.tcl << 'EOF'
+* # Genus 합성 스크립트
+
+```
 vi genus/synthesis.tcl
+```
+
+```
 ###############################################################################
 # Genus Synthesis Script for JSilicon
 # FreePDK45 Technology
@@ -1092,18 +1385,19 @@ puts "  $report_dir/timing.rpt"
 puts ""
 
 exit
-EOF
+```
 
+```
 chmod +x genus/synthesis.tcl
 ```
 
 #### 3-2. 합성 실행
 
-```bash
+```
 cd ~/JSilicon2/work/synthesis
 
 # Genus 실행
-genus -f ../../scripts/genus/synthesis.tcl 2>&1 | tee synthesis.log
+genus -f ../../scripts/genus/synthesis.tcl |& tee synthesis.log
 ```
 
 **실행 과정:**
@@ -1121,7 +1415,7 @@ Total: ~2-3분
 
 #### 3-3. 합성 결과 확인
 
-```bash
+```
 cd ~/JSilicon2
 
 # 생성된 파일 확인
@@ -1135,31 +1429,132 @@ echo "=== QoR Summary ==="
 cat reports/synthesis/qor.rpt | tail -50
 ```
 
+```
+=== QoR Summary ===
+[student001@gjchamber ~/JSilicon2]$ cat reports/synthesis/qor.rpt | tail -50
+  Generated by:           Genus(TM) Synthesis Solution 23.13-s073_1
+  Generated on:           Nov 18 2025  07:22:45 am
+  Module:                 tt_um_Jsilicon
+  Operating conditions:   typical
+  Interconnect mode:      global
+  Area mode:              physical library
+============================================================
+
+Timing
+--------
+
+Clock Period
+-------------
+clk   5000.0
+
+
+  Cost    Critical         Violating
+ Group   Path Slack  TNS     Paths
+-------------------------------------
+clk             2.9   0.0          0
+default    No paths   0.0
+-------------------------------------
+Total                 0.0          0
+
+Instance Count
+--------------
+Leaf Instance Count             669
+Physical Instance count           0
+Sequential Instance Count        42
+Combinational Instance Count    627
+Hierarchical Instance Count       2
+
+Area
+----
+Cell Area                          1982.793
+Physical Cell Area                 0.000
+Total Cell Area (Cell+Physical)    1982.793
+Net Area                           1319.789
+Total Area (Cell+Physical+Net)     3302.582
+
+Max Fanout                         42 (clk)
+Min Fanout                         0 (n_4)
+Average Fanout                     1.8
+Terms to net ratio                 2.8428
+Terms to instance ratio            3.0807
+Runtime                            122.600606 seconds
+Elapsed Runtime                    141 seconds
+Genus peak memory usage            1982.35
+Innovus peak memory usage          no_value
+Hostname                           localhost
+
+```
+
 **주요 확인 항목:**
 
 ```bash
 # 1. 타이밍 확인
 grep -A 10 "Timing" reports/synthesis/qor.rpt
 
-# 예상 출력:
-# Clock Period: 5000.0 ps
-# Critical Path Slack: 216.6 ps  ← 양수면 OK!
-# TNS: 0.0                        ← 0이면 OK!
+# 출력:
+# Timing
+# --------
+# 
+# Clock Period
+# -------------
+# clk   5000.0
+# 
+# 
+#  Cost    Critical         Violating
+# Group   Path Slack  TNS     Paths
+# -------------------------------------
+
 
 # 2. 면적 확인
 grep -A 5 "Area" reports/synthesis/qor.rpt
 
-# 예상 출력:
-# Cell Area: 1785.687 um²
-# Total Area: 2958.316 um²
+# 출력:
+#  Area mode:              physical library
+#============================================================
+#
+#Timing
+#--------
+#
+#--
+#Area
+#----
+#Cell Area                          1982.793
+#Physical Cell Area                 0.000
+#Total Cell Area (Cell+Physical)    1982.793
+#Net Area                           1319.789
+#Total Area (Cell+Physical+Net)     3302.582
+#
+#Max Fanout                         42 (clk)
+#Min Fanout                         0 (n_4)
+#Average Fanout                     1.8
+#Terms to net ratio                 2.8428
+
 
 # 3. 게이트 수 확인
 cat reports/synthesis/gates.rpt | head -20
 
-# 예상 출력:
-# Total Cells: 595
-# Sequential: 42 (Flip-flops)
-# Combinational: 553
+# 출력:
+# ============================================================
+#   Generated by:           Genus(TM) Synthesis Solution 23.13-s073_1
+#   Generated on:           Nov 18 2025  07:22:45 am
+#   Module:                 tt_um_Jsilicon
+#   Technology libraries:   gscl45nm
+#                           physical_cells
+#                           gscl45nm
+#                           physical_cells
+#   Operating conditions:   typical
+#   Interconnect mode:      global
+#   Area mode:              physical library
+# ============================================================
+# 
+# 
+#   Gate    Instances    Area     Library
+# ------------------------------------------
+# AND2X2           84   197.106    gscl45nm
+# AOI21X1          14    32.851    gscl45nm
+# AOI22X1          10    28.158    gscl45nm
+# BUFX2            73   137.036    gscl45nm
+
 ```
 
 #### 3-4. 타이밍 분석
@@ -1167,6 +1562,110 @@ cat reports/synthesis/gates.rpt | head -20
 ```bash
 # 상위 10개 Critical Path 확인
 cat reports/synthesis/timing.rpt | head -100
+```
+
+```
+
+============================================================
+  Generated by:           Genus(TM) Synthesis Solution 23.13-s073_1
+  Generated on:           Nov 18 2025  07:22:45 am
+  Module:                 tt_um_Jsilicon
+  Operating conditions:   typical
+  Interconnect mode:      global
+  Area mode:              physical library
+============================================================
+
+
+Path 1: MET (3 ps) Setup Check with Pin core_inst_uart_inst/data_reg_reg[0]/CLK->D
+          Group: clk
+     Startpoint: (R) uio_in[4]
+          Clock: (R) clk
+       Endpoint: (R) core_inst_uart_inst/data_reg_reg[0]/D
+          Clock: (R) clk
+
+                     Capture       Launch
+        Clock Edge:+    5000            0
+        Drv Adjust:+       0           16
+       Src Latency:+       0            0
+       Net Latency:+       0 (I)        0 (I)
+           Arrival:=    5000           16
+
+             Setup:-    1438
+       Uncertainty:-     500
+     Required Time:=    3062
+      Launch Clock:-      16
+       Input Delay:-    1500
+         Data Path:-    1544
+             Slack:=       3
+
+Exceptions/Constraints:
+  input_delay             1500            jsilicon.sdc_line_16_12_1
+
+#---------------------------------------------------------------------------------------------------------------------
+#                Timing Point                  Flags   Arc   Edge   Cell     Fanout Load Trans Delay Arrival Instance
+#                                                                                   (fF)  (ps)  (ps)   (ps)  Location
+#---------------------------------------------------------------------------------------------------------------------
+  uio_in[4]                                    -       -     R     (arrival)      2  9.8    23     0    1516    (-,-)
+  g2013/Y                                      -       A->Y  F     INVX2          9 34.8    40    48    1563    (-,-)
+  g1991__6161/Y                                -       B->Y  R     NAND2X1        1  4.7    45    30    1594    (-,-)
+  drc_bufs20986/Y                              -       A->Y  R     BUFX2         12 64.2   155   132    1726    (-,-)
+  core_inst_alu_inst_rem_39_73_g20534__4319/YC -       B->YC R     FAX1           1  5.2    33    74    1800    (-,-)
+  core_inst_alu_inst_rem_39_73_g20530__2398/Y  -       C->Y  F     OAI21X1        1  5.4    18    25    1824    (-,-)
+  g20831/Y                                     -       A->Y  R     NOR2X1         1  4.7    35    39    1863    (-,-)
+  g20767/Y                                     -       A->Y  R     BUFX2          2  8.6    24    45    1908    (-,-)
+  g21054/Y                                     -       B->Y  R     AND2X2         3 12.3    32    48    1956    (-,-)
+  drc_bufs20844/Y                              -       A->Y  F     INVX1          1  5.1    19    28    1984    (-,-)
+  core_inst_alu_inst_rem_39_73_g20477__1666/Y  -       B->Y  R     NAND2X1        1  4.7    46    23    2008    (-,-)
+  g20795/Y                                     -       A->Y  R     BUFX2          2  8.4    25    45    2053    (-,-)
+  core_inst_alu_inst_rem_39_73_g20447__9315/Y  -       B->Y  F     NAND2X1        1  4.7    27    23    2076    (-,-)
+  drc_bufs20854/Y                              -       A->Y  F     BUFX2          1  5.8    10    40    2116    (-,-)
+  core_inst_alu_inst_rem_39_73_g20422__8246/Y  -       A->Y  R     OAI21X1        4 17.2   112    90    2207    (-,-)
+  g20803/Y                                     -       A->Y  F     INVX1          2  9.3    26    58    2265    (-,-)
+  core_inst_alu_inst_rem_39_73_g20402__3680/Y  -       B->Y  F     AND2X2         3 13.2    17    53    2318    (-,-)
+  core_inst_alu_inst_rem_39_73_g20383__2346/Y  -       B->Y  R     OAI21X1        2  8.7    72    62    2380    (-,-)
+  core_inst_alu_inst_rem_39_73_g20373__9315/Y  -       B->Y  R     AND2X2         2  9.8    29    47    2427    (-,-)
+  core_inst_alu_inst_rem_39_73_g20372/Y        -       A->Y  F     INVX2          4 21.8    30    38    2465    (-,-)
+  core_inst_alu_inst_rem_39_73_g20370__4733/Y  -       A->Y  F     OR2X2          2  9.4    25    49    2514    (-,-)
+  core_inst_alu_inst_rem_39_73_g20333__6260/Y  -       C->Y  R     NAND3X1        1  4.7    48    41    2555    (-,-)
+  drc_bufs21070/Y                              -       A->Y  R     BUFX2          1  5.0    18    40    2595    (-,-)
+  core_inst_alu_inst_rem_39_73_g20319__6161/Y  -       A->Y  R     AND2X2         1  5.2    17    38    2633    (-,-)
+  core_inst_alu_inst_rem_39_73_g20317__4733/Y  -       C->Y  F     OAI21X1        2  9.8    25    27    2660    (-,-)
+  core_inst_alu_inst_rem_39_73_g20308__7098/Y  -       A->Y  F     OR2X2          4 17.7    30    57    2718    (-,-)
+  core_inst_alu_inst_rem_39_73_g20291__2398/Y  -       A->Y  R     AOI21X1        1  4.7    39    49    2767    (-,-)
+  drc_bufs20863/Y                              -       A->Y  R     BUFX2          1  5.5    17    40    2807    (-,-)
+  core_inst_alu_inst_rem_39_73_g20283__9945/Y  -       A->Y  R     OR2X2          1  5.9    20    44    2850    (-,-)
+  g21052/Y                                     -       B->Y  F     AOI21X1        1  5.9    26    33    2884    (-,-)
+  g3/Y                                         -       A->Y  R     INVX2          3 61.9   144   106    2990    (-,-)
+  core_inst_uart_inst/g2965__3680/Y            -       A->Y  F     MUX2X1         1  4.7    22    56    3045    (-,-)
+  core_inst_uart_inst/g2960/Y                  -       A->Y  R     INVX1          1  5.0     0    14    3059    (-,-)
+  core_inst_uart_inst/data_reg_reg[0]/D        -       -     R     DFFPOSX1       1    -     -     0    3060    (-,-)
+#---------------------------------------------------------------------------------------------------------------------
+
+
+
+Path 2: MET (4 ps) Setup Check with Pin core_inst_uart_inst/data_reg_reg[0]/CLK->D
+          Group: clk
+     Startpoint: (R) uio_in[4]
+          Clock: (R) clk
+       Endpoint: (R) core_inst_uart_inst/data_reg_reg[0]/D
+          Clock: (R) clk
+
+                     Capture       Launch
+        Clock Edge:+    5000            0
+        Drv Adjust:+       0           16
+       Src Latency:+       0            0
+       Net Latency:+       0 (I)        0 (I)
+           Arrival:=    5000           16
+
+             Setup:-    1438
+       Uncertainty:-     500
+     Required Time:=    3062
+      Launch Clock:-      16
+       Input Delay:-    1500
+         Data Path:-    1543
+             Slack:=       4
+
+Exceptions/Constraints:
 ```
 
 **타이밍 리포트 해석:**
@@ -1201,12 +1700,17 @@ Path:
 
 #### 4-1. MMMC 설정 파일 생성
 
-```bash
+```
 cd ~/JSilicon2/scripts
 mkdir -p innovus
+```
 
+```
 # MMMC (Multi-Mode Multi-Corner) 설정
-cat > innovus/mmmc.tcl << 'EOF'
+vi innovus/mmmc.tcl
+```
+
+```
 ###############################################################################
 # MMMC Setup for JSilicon
 ###############################################################################
@@ -1241,14 +1745,16 @@ create_analysis_view -name VIEW_TYPICAL \
 set_analysis_view -setup VIEW_TYPICAL -hold VIEW_TYPICAL
 
 puts "MMMC setup complete"
-EOF
 ```
 
 #### 4-2. P&R 스크립트 생성
 
-```bash
+```
 # Innovus P&R 스크립트
-cat > innovus/pnr_flow.tcl << 'EOF'
+vi innovus/pnr_flow.tcl
+```
+
+```
 ###############################################################################
 # Innovus P&R Flow for JSilicon
 ###############################################################################
@@ -1345,18 +1851,28 @@ puts "========================================="
 puts ""
 
 exit
-EOF
+```
 
+```
 chmod +x innovus/pnr_flow.tcl
 ```
 
 #### 4-3. P&R 실행
 
-```bash
+```
 cd ~/JSilicon2/work/pnr
 
 # Innovus 실행
-innovus -init ../../scripts/innovus/pnr_flow.tcl 2>&1 | tee pnr.log
+innovus -init ../../scripts/innovus/pnr_flow.tcl |& tee pnr.log
+
+# Innovus 종료
+innovus 3> exit
+
+*** Memory Usage v#2 (Current mem = 3433.059M, initial mem = 839.172M) ***
+*** Message Summary: 129 warning(s), 7 error(s)
+
+--- Ending "Innovus" (totcpu=0:01:20, real=0:04:51, mem=3433.1M) ---
+
 ```
 
 **실행 과정 (예상 10-15분):**
@@ -1372,19 +1888,30 @@ innovus -init ../../scripts/innovus/pnr_flow.tcl 2>&1 | tee pnr.log
 
 #### 4-4. P&R 결과 확인
 
-```bash
+```
 cd ~/JSilicon2
 
 # 생성된 파일
 echo "=== Generated Files ==="
-ls -lh results/def/tt_um_Jsilicon.def
-ls -lh results/netlist/tt_um_Jsilicon_final.v
+ls -lh results/def/tt_um_Jsilicon.def ✗ 없음 (아직 생성전)
+ls -lh results/netlist/tt_um_Jsilicon_synth.v
 
 # Summary 리포트
 echo ""
 echo "=== P&R Summary ==="
 cat reports/pnr/summary.rpt
 ```
+
+* DEF 파일이란?
+   * DEF (Design Exchange Format) 파일은 물리적 배치 정보를 담고 있는 파일입니다.
+
+* 주요 내용
+   * 셀 배치 (Placement): 각 표준 셀의 x, y 좌표
+   * 라우팅 (Routing): 금속 배선 정보
+   * 핀 위치: I/O 핀의 물리적 위치
+   * 다이 크기: 칩의 실제 물리적 크기
+   * 전원/그라운드 네트워크: Power grid 정보
+
 
 **주요 메트릭:**
 
