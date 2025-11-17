@@ -781,6 +781,45 @@ EOF
 cat jsilicon.sdc
 ```
 
+```
+#csh
+[student001@gjchamber constraints]$
+[student001@gjchamber constraints]$ vi jsilicon.sdc
+################################################################################
+# JSilicon Design Constraints
+# FreePDK45 - 45nm Technology
+################################################################################
+
+# Clock Definition (200MHz for FreePDK45)
+create_clock -name clk -period 5.0 [get_ports clk]
+set_clock_uncertainty 0.5 [get_clocks clk]
+set_clock_transition 0.1 [get_clocks clk]
+
+# Reset
+set_false_path -from [get_ports rst_n]
+
+# Input Delays (30% of clock period)
+set_input_delay -clock clk -max 1.5 [all_inputs]
+set_input_delay -clock clk -min 0.5 [all_inputs]
+
+# Output Delays
+set_output_delay -clock clk -max 1.5 [all_outputs]
+set_output_delay -clock clk -min 0.5 [all_outputs]
+
+# Load
+set_load 0.01 [all_outputs]
+
+# Max Fanout
+set_max_fanout 16 [current_design]
+
+# Max Transition
+set_max_transition 0.5 [current_design]
+
+# Design Rules
+set_max_area 0
+```
+
+
 #### 2-2. SDC 파일 설명
 
 | 제약 조건 | 값 | 의미 |
