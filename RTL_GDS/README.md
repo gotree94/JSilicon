@@ -1875,6 +1875,12 @@ innovus 3> exit
 
 ```
 
+
+
+<img width="1032" height="897" alt="005" src="https://github.com/user-attachments/assets/4371ffde-a170-421f-b34f-3f917fc6ba07" />
+
+
+
 **실행 과정 (예상 10-15분):**
 ```
 1. Design initialization [~1분]
