@@ -345,6 +345,115 @@ tech/lef/gscl45nm.lef  ~64 KB
   * P&R: LEF로 물리 배치/배선
   * STA: LIB로 타이밍 검증
 
+#### *gscl45nm.lef (Library Exchange Format)
+* LEF 파일은 물리적 레이아웃 정보를 담고 있습니다. Place & Route 툴에서 사용됩니다.
+* 📌 Metal Layer 예시 (metal1)
+```lef
+  LAYER metal1
+  TYPE ROUTING ;
+  DIRECTION HORIZONTAL ;
+  PITCH 0.19 ;
+  WIDTH 0.065 ;
+  SPACING 0.065 ;
+  RESISTANCE RPERSQ 0.38 ;
+END metal1
+```
+
+* 설명:
+  * TYPE ROUTING: 배선용 레이어
+  * DIRECTION HORIZONTAL: metal1은 수평 방향 우선 배선
+  * PITCH 0.19 µm: 인접 트랙 간격
+  * WIDTH 0.065 µm: 최소 배선 폭
+  * SPACING 0.065 µm: 최소 배선 간격 (DRC 규칙)
+  * RESISTANCE 0.38 Ω/□: Sheet resistance (IR drop 계산용)
+
+* 📌 Standard Cell 예시 (AND2X1)
+```lef
+MACRO AND2X1
+  CLASS CORE ;
+  SIZE 1.14 BY 2.47 ;
+  SYMMETRY X Y ;
+  PIN A
+    DIRECTION INPUT ;
+    PORT
+      LAYER metal1 ;
+        RECT 0.1475 1.2275 0.2825 1.3625 ;
+    END
+  END A
+  PIN Y
+    DIRECTION OUTPUT ;
+    ...
+END AND2X1
+```
+
+* 설명:
+   * SIZE 1.14 × 2.47 µm: 셀의 물리적 크기
+   * SYMMETRY X Y: 좌우/상하 대칭 가능 (placement 최적화)
+   * PIN A RECT: 입력 핀 A의 metal1 상의 좌표 (µm)
+   * Place & Route 시 이 좌표로 net을 연결합니다
+
+#### *gscl45nm.lib (Liberty Format)
+* LIB 파일은 타이밍, 전력, 기능 정보를 담고 있습니다. Synthesis와 STA에서 사용됩니다.
+* 📌 라이브러리 공통 정보
+```lib
+  ertylibrary(gscl45nm) {
+  time_unit : "1ns";
+  voltage_unit : "1V";
+  nom_voltage : 1.1;
+  nom_temperature : 27;
+  
+  operating_conditions ( typical ) {
+     process : 1;
+     voltage : 1.1;
+     temperature : 27;
+  }
+```
+
+* 설명:
+  * nominal voltage 1.1V, 27°C 조건
+  * typical corner (TT) 기준 characterization
+
+* 📌 Cell 타이밍 예시 (AND2X1)
+```lib
+  ertycell (AND2X1) {
+  area : 2.346500;
+  cell_leakage_power : 15.6059;
+  
+  pin(A) {
+    direction : input;
+    capacitance : 0.00229149;  /* pF */
+  }
+  
+  pin(Y) {
+    direction : output;
+    max_capacitance : 0.137429;
+    function : "(A B)";
+    
+    timing() {
+      related_pin : "A";
+      cell_rise(delay_template_6x6) {
+        index_1 ("0.1, 0.5, 1.2, 3, 4, 5");      /* input slew */
+        index_2 ("0.06, 0.24, 0.48, 0.9, 1.2, 1.8"); /* load cap */
+        values (
+          "0.335, 0.333, 0.278, ...",  /* ns */
+          ...
+        );
+      }
+    }
+  }
+}
+```
+
+* 설명:
+  * area: 셀 면적 (µm²)
+  * leakage_power: 정적 소비 전력 (nW)
+  * capacitance: 입력 핀 부하 (pF) - fanout 계산에 사용
+  * function: Boolean 논리식 Y = A & B
+  * cell_rise: 6×6 lookup table
+      * index_1: 입력 slew (ns)
+      * index_2: 출하 부하 (pF)
+      * values: 전파 지연 시간 (ns)
+      * 예: input slew 0.1ns, load 0.06pF → delay 0.335ns
 
 #### 0-4. 환경 변수 설정
 
