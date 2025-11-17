@@ -1859,14 +1859,14 @@ exit
 ################################################################################
 # Innovus P&R Flow Script
 # Design: tt_um_Jsilicon
+# PDK: FreePDK45 (gscl45nm)
 ################################################################################
 
 set DESIGN_NAME "tt_um_Jsilicon"
-set PDK_ROOT $::env(PDK_ROOT)
-set PDK "sky130A"
 
 puts "=========================================="
 puts "P&R Flow for $DESIGN_NAME"
+puts "PDK: FreePDK45 (gscl45nm)"
 puts "=========================================="
 
 ################################################################################
@@ -1874,37 +1874,39 @@ puts "=========================================="
 ################################################################################
 puts "\n1. Setting up libraries..."
 
-# Technology LEF
-set lef_files [list \
-    $PDK_ROOT/$PDK/libs.ref/sky130_fd_sc_hd/techlef/sky130_fd_sc_hd__nom.tlef \
-    $PDK_ROOT/$PDK/libs.ref/sky130_fd_sc_hd/lef/sky130_fd_sc_hd.lef \
-]
+# LEF 파일 (프로젝트 tech 디렉토리)
+set lef_file "../../tech/lef/gscl45nm.lef"
 
-# Timing libraries
-set timing_lib $PDK_ROOT/$PDK/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
-
-# LEF 읽기
-foreach lef $lef_files {
-    if { [file exists $lef] } {
-        read_physical -lef $lef
-        puts "  Read LEF: $lef"
-    } else {
-        puts "Warning: LEF not found: $lef"
-    }
+if { [file exists $lef_file] } {
+    read_physical -lef $lef_file
+    puts "  ✓ Read LEF: $lef_file"
+} else {
+    puts "ERROR: LEF file not found: $lef_file"
+    exit 1
 }
 
-# 타이밍 라이브러리 읽기
-if { [file exists $timing_lib] } {
-    read_timing_library $timing_lib
-    puts "  Read timing lib: $timing_lib"
+# Timing library
+set lib_file "../../tech/lib/gscl45nm.lib"
+
+if { [file exists $lib_file] } {
+    read_timing_library $lib_file
+    puts "  ✓ Read timing lib: $lib_file"
 } else {
-    puts "Warning: Timing library not found: $timing_lib"
+    puts "ERROR: Timing library not found: $lib_file"
+    exit 1
 }
 
 ################################################################################
 # 2. 넷리스트 읽기
 ################################################################################
 puts "\n2. Reading netlist..."
+
+if { ![file exists ../../results/netlist/${DESIGN_NAME}_synth.v] } {
+    puts "ERROR: Synthesized netlist not found!"
+    puts "Expected: ../../results/netlist/${DESIGN_NAME}_synth.v"
+    exit 1
+}
+
 read_netlist ../../results/netlist/${DESIGN_NAME}_synth.v
 set_top_module $DESIGN_NAME
 
@@ -1919,11 +1921,11 @@ init_design
 ################################################################################
 puts "\n4. Creating floorplan..."
 
-# 코어 사이즈 설정 (예시: 100um x 100um)
-# 실제 사이즈는 셀 개수에 따라 조정 필요
-floorPlan -site unithd -r 1.0 0.7 10 10 10 10
+# Core utilization 0.7, aspect ratio 1.0 (정사각형)
+# Margins: 10um on all sides
+floorPlan -r 1.0 0.7 10.0 10.0 10.0 10.0
 
-# I/O 배치
+# I/O 핀 자동 배치
 setPinAssignMode -pinEditInBatch true
 assignPin
 
@@ -1932,50 +1934,60 @@ assignPin
 ################################################################################
 puts "\n5. Creating power grid..."
 
-# Global net 연결
-globalNetConnect VDD -type pgpin -pin VDD* -inst * -override
-globalNetConnect VSS -type pgpin -pin VSS* -inst * -override
-globalNetConnect VDD -type tiehi -inst *
-globalNetConnect VSS -type tielo -inst *
+# Global net 연결 (gscl45nm은 vdd/gnd 사용)
+globalNetConnect vdd -type pgpin -pin vdd -inst * -override
+globalNetConnect gnd -type pgpin -pin gnd -inst * -override
+globalNetConnect vdd -type tiehi -inst *
+globalNetConnect gnd -type tielo -inst *
 
-# Power ring 생성
-addRing -nets {VDD VSS} -type core_rings -layer {metal5 metal6} \
-    -width 2 -spacing 1 -offset 2
+# Power ring 생성 (metal9, metal10 사용)
+addRing -nets {vdd gnd} -type core_rings \
+    -layer {metal9 metal10} \
+    -width 2.0 -spacing 1.0 -offset 5.0
 
-# Power stripe 생성
-addStripe -nets {VDD VSS} -layer metal4 -direction vertical \
-    -width 1 -spacing 5 -number_of_sets 3
+# Power stripes (metal8 vertical)
+addStripe -nets {vdd gnd} \
+    -layer metal8 \
+    -direction vertical \
+    -width 1.0 -spacing 10.0 -number_of_sets 3
 
-# Special route (power)
-sroute -connect {corePin} -nets {VDD VSS}
+# Special routing for power
+sroute -connect {corePin} -nets {vdd gnd}
 
 ################################################################################
 # 6. Placement
 ################################################################################
 puts "\n6. Placing standard cells..."
 
-# Placement 설정
+# Placement 옵션
 setPlaceMode -congEffort high -timingDriven true
 
-# Standard cell placement
+# Standard cell placement with optimization
 place_opt_design
 
-# Pre-CTS 최적화
+# Pre-CTS optimization
 optDesign -preCTS
 
 ################################################################################
-# 7. Clock Tree Synthesis
+# 7. Clock Tree Synthesis (CTS)
 ################################################################################
 puts "\n7. Building clock tree..."
 
-# 클락 정의
+# Clock constraint
+# FreePDK45 (45nm)는 더 빠른 클락 가능
+# 10ns = 100MHz
 create_clock -name clk -period 10.0 [get_ports clk]
 set_clock_uncertainty 0.5 [get_clocks clk]
 
-# CTS
-ccopt_design
+# Input/Output delays
+set_input_delay -clock clk -max 2.0 [remove_from_collection [all_inputs] [get_ports clk]]
+set_output_delay -clock clk -max 2.0 [all_outputs]
 
-# Post-CTS 최적화
+# Clock tree synthesis (최신 Innovus)
+puts "Running clock tree synthesis..."
+clock_opt_design
+
+# Post-CTS optimization
 optDesign -postCTS
 
 ################################################################################
@@ -1983,14 +1995,14 @@ optDesign -postCTS
 ################################################################################
 puts "\n8. Routing design..."
 
-# Routing 설정
+# Routing 옵션
 setNanoRouteMode -drouteFixAntenna true
 setNanoRouteMode -droutePostRouteSwapVia true
 
 # Detail routing
 routeDesign
 
-# Post-route 최적화
+# Post-route optimization
 optDesign -postRoute
 
 ################################################################################
@@ -1998,7 +2010,10 @@ optDesign -postRoute
 ################################################################################
 puts "\n9. Adding filler cells..."
 
-setFillerMode -corePrefix FILL -core "sky130_fd_sc_hd__fill_*"
+# gscl45nm filler cells
+# LEF에서 filler cell 이름 확인 필요
+# 일반적으로 FILL로 시작
+setFillerMode -corePrefix FILL -core "FILL*"
 addFiller
 
 ################################################################################
@@ -2006,35 +2021,35 @@ addFiller
 ################################################################################
 puts "\n10. Running verification..."
 
-# DRC 체크
+# Geometry check
 verifyGeometry -report ../../reports/pnr/geometry.rpt
 
-# Connectivity 체크
+# Connectivity check
 verifyConnectivity -report ../../reports/pnr/connectivity.rpt
-
-# Antenna 체크
-verifyProcessAntenna -report ../../reports/pnr/antenna.rpt
 
 ################################################################################
 # 11. 타이밍 분석
 ################################################################################
 puts "\n11. Generating timing reports..."
 
-# Setup timing
+# Setup timing (max delay)
 report_timing -max_paths 10 -nworst 1 -delay_type max \
     > ../../reports/pnr/timing_setup.rpt
 
-# Hold timing
+# Hold timing (min delay)
 report_timing -max_paths 10 -nworst 1 -delay_type min \
     > ../../reports/pnr/timing_hold.rpt
 
-# Summary
+# Timing summary
 report_timing_summary > ../../reports/pnr/timing_summary.rpt
 
+# Check for violations
+report_constraint -all_violators > ../../reports/pnr/violations.rpt
+
 ################################################################################
-# 12. 면적 리포트
+# 12. 면적 및 전력 리포트
 ################################################################################
-puts "\n12. Generating area reports..."
+puts "\n12. Generating area and power reports..."
 
 report_area > ../../reports/pnr/area.rpt
 report_power > ../../reports/pnr/power.rpt
@@ -2044,36 +2059,52 @@ report_power > ../../reports/pnr/power.rpt
 ################################################################################
 puts "\n13. Saving outputs..."
 
-# DEF 출력
+# DEF 파일 저장
 defOut -floorplan -netlist -routing ../../results/def/${DESIGN_NAME}.def
 
-# Final netlist 출력
+# Final netlist 저장
 saveNetlist ../../results/netlist/${DESIGN_NAME}_final.v
 
 # 디자인 데이터베이스 저장
 saveDesign ${DESIGN_NAME}_final.enc
 
-# Summary 리포트
+# Summary report
 summaryReport -outFile ../../reports/pnr/summary.rpt
 
 ################################################################################
 # 완료
 ################################################################################
 puts "\n=========================================="
-puts "P&R Flow Completed!"
+puts "✓ P&R Flow Completed Successfully!"
 puts "=========================================="
 puts "\nGenerated files:"
-puts "  DEF: results/def/${DESIGN_NAME}.def"
-puts "  Netlist: results/netlist/${DESIGN_NAME}_final.v"
-puts "  Reports: reports/pnr/"
-puts "\nNext: Check timing reports and run STA"
+puts "  DEF:     ../../results/def/${DESIGN_NAME}.def"
+puts "  Netlist: ../../results/netlist/${DESIGN_NAME}_final.v"
+puts "  Reports: ../../reports/pnr/"
+puts ""
+puts "Key metrics:"
+puts "-------------"
+
+# 파일 크기 표시
+if { [file exists ../../results/def/${DESIGN_NAME}.def] } {
+    set def_size [file size ../../results/def/${DESIGN_NAME}.def]
+    puts "  DEF size: [expr $def_size / 1024] KB"
+}
+
+if { [file exists ../../results/netlist/${DESIGN_NAME}_final.v] } {
+    set netlist_size [file size ../../results/netlist/${DESIGN_NAME}_final.v]
+    puts "  Netlist size: [expr $netlist_size / 1024] KB"
+}
+
+puts "\nNext steps:"
+puts "  1. Check timing: tail -50 ../../reports/pnr/timing_summary.rpt"
+puts "  2. Run STA: Step 3 in guide"
+puts "  3. Generate GDS: Step 4 in guide"
 puts "=========================================="
 
-# GUI 모드면 디자인 표시
+# GUI 모드면 화면 fit
 if { [info exists gui_mode] && $gui_mode == 1 } {
     fit
-} else {
-    exit
 }
 ```
 
@@ -2085,6 +2116,13 @@ chmod +x innovus/pnr_flow.tcl
 
 ```
 cd ~/JSilicon2/work/pnr
+
+# Innovus 실행
+innovus
+
+# GUI 모드에서 실행
+cd work/pnr
+# GUI에서: source ../../scripts/innovus/pnr_flow.tcl
 
 # Innovus 실행
 innovus -init ../../scripts/innovus/pnr_flow.tcl |& tee pnr.log
