@@ -3261,20 +3261,6 @@ fit
 
 ---
 
-## 👨‍💻 Author
-
-**나무 (Namu)**
-- Digital IC Design Engineer
-- Focus: ASIC Design Flow, RISC-V, Post-Quantum Cryptography
-
----
-
-## 📄 License
-
-This project is for educational purposes.
-
----
-
 ## 🎯 결론
 
 JSilicon 프로젝트는 FreePDK45 공정을 사용한 RISC-V 코어의 성공적인 ASIC 구현을 보여줍니다:
