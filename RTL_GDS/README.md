@@ -1153,7 +1153,7 @@ cd ~/JSilicon2/constraints
 vi jsilicon.sdc
 ```
 
-## 📖 SDC (Synopsys Design Constraints) 파일 생성 : Cadence도 동일함
+* SDC (Synopsys Design Constraints) 파일 생성 : Cadence도 동일함
 
 ```csh
 ###############################################################################
@@ -1253,7 +1253,7 @@ cd ~/JSilicon2/scripts
 mkdir -p genus
 ```
 
-* # Genus 합성 스크립트
+* Genus 합성 스크립트
 
 ```
 vi genus/synthesis.tcl
@@ -1747,7 +1747,7 @@ vi innovus/mmmc.tcl
 ~~puts "MMMC setup complete"~~
 
 
-## Final
+* Final
 
 ```
 ###############################################################################
@@ -2661,8 +2661,7 @@ echo "=========================================="
 
 ### Step 5: 결과 분석 및 검증
 
-## 📋 목차
-
+* 📋 목차
 - [P&R 결과 분석](#pr-결과-분석)
   - [1. 타이밍 분석](#1-타이밍-분석)
   - [2. 면적 분석](#2-면적-분석)
@@ -2703,7 +2702,7 @@ echo "=========================================="
 
 ## P&R 결과 분석
 
-### 1. 타이밍 분석
+### 5.1. 타이밍 분석
 
 #### 🔴 Setup Timing (최대 동작 주파수)
 
@@ -2810,7 +2809,7 @@ Achievable:     ~162 MHz (6.17 ns)
 
 ---
 
-### 2. 면적 분석
+### 5.2. 면적 분석
 
 #### 📐 칩 면적
 
@@ -2864,7 +2863,7 @@ Utilization = Std Cell Area / Core Area
 
 ---
 
-### 3. 전력 분석
+### 5.3. 전력 분석
 
 #### ⚡ 전력 소모 요약
 
@@ -2933,7 +2932,7 @@ Highest Leakage Power:
 
 ---
 
-### 4. Violations 분석
+### 5.4. Violations 분석
 
 #### ⚠️ Constraint Violations 요약
 
@@ -2995,7 +2994,7 @@ Highest Leakage Power:
 
 ---
 
-### 5. Physical Verification
+### 5.5. Physical Verification
 
 #### ✅ Geometry Check (DRC)
 
@@ -3136,54 +3135,6 @@ JSilicon2/
         ├── geometry.rpt          # DRC
         ├── connectivity.rpt      # 연결성
         └── summary.rpt           # 전체 요약
-```
-
----
-
-## 🚀 실행 방법
-
-### 1. Synthesis (Genus)
-
-```csh
-cd ~/JSilicon2/work/synthesis
-genus -f ../../scripts/genus/synthesis.tcl |& tee synthesis.log
-```
-
-### 2. Place & Route (Innovus)
-
-```csh
-cd ~/JSilicon2/work/pnr
-innovus -init ../../scripts/innovus/pnr_flow.tcl |& tee pnr.log
-```
-
-### 3. 결과 확인
-
-```csh
-cd ~/JSilicon2
-
-# 빠른 확인
-./quick_check.csh
-
-# 상세 분석
-./analyze_pnr_results.csh
-
-# 개별 리포트
-cat reports/pnr/timing_summary.rpt
-cat reports/pnr/area_final.rpt
-cat reports/pnr/power_final.rpt
-```
-
-### 4. GUI로 레이아웃 보기
-
-```csh
-cd ~/JSilicon2/work/pnr
-innovus
-```
-
-Innovus 콘솔에서:
-```tcl
-restoreDesign jsilicon_final.enc.dat tt_um_Jsilicon
-fit
 ```
 
 ---
@@ -5788,4 +5739,52 @@ cd ../..
 
 # 4. 최종 상태 확인
 ./check_status.csh
+```
+
+
+
+## 🚀 실행 방법
+
+### 1. Synthesis (Genus)
+
+```csh
+cd ~/JSilicon2/work/synthesis
+genus -f ../../scripts/genus/synthesis.tcl |& tee synthesis.log
+```
+
+### 2. Place & Route (Innovus)
+
+```csh
+cd ~/JSilicon2/work/pnr
+innovus -init ../../scripts/innovus/pnr_flow.tcl |& tee pnr.log
+```
+
+### 3. 결과 확인
+
+```csh
+cd ~/JSilicon2
+
+# 빠른 확인
+./quick_check.csh
+
+# 상세 분석
+./analyze_pnr_results.csh
+
+# 개별 리포트
+cat reports/pnr/timing_summary.rpt
+cat reports/pnr/area_final.rpt
+cat reports/pnr/power_final.rpt
+```
+
+### 4. GUI로 레이아웃 보기
+
+```csh
+cd ~/JSilicon2/work/pnr
+innovus
+```
+
+Innovus 콘솔에서:
+```tcl
+restoreDesign jsilicon_final.enc.dat tt_um_Jsilicon
+fit
 ```
