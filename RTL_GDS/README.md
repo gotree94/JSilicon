@@ -1747,9 +1747,11 @@ set_analysis_view -setup VIEW_TYPICAL -hold VIEW_TYPICAL
 puts "MMMC setup complete"
 ```
 
+## Final
+
 ```
 ###############################################################################
-# MMMC Setup for JSilicon
+# MMMC Setup for JSilicon (MMMC-1 방식)
 # File: scripts/innovus/mmmc.tcl
 ###############################################################################
 
@@ -1758,7 +1760,7 @@ set tech_lib $project_root/tech/lib/gscl45nm.lib
 set sdc_file $project_root/work/synthesis/tt_um_Jsilicon_synth.sdc
 
 puts "=========================================="
-puts "MMMC Configuration"
+puts "MMMC Configuration (MMMC-1)"
 puts "=========================================="
 puts "Tech Library: $tech_lib"
 puts "SDC File: $sdc_file"
@@ -1776,36 +1778,20 @@ if { ![file exists $sdc_file] } {
     set sdc_file ""
 }
 
-# Library set
+# MMMC-1 방식: library_set 기반
 puts "Creating library set..."
 create_library_set -name LIB_TYPICAL \
     -timing $tech_lib
 
-# Operating condition
-puts "Creating operating condition..."
-create_opcond -name OP_TYPICAL \
-    -process 1.0 \
-    -voltage 1.1 \
-    -temperature 27
-
-# Timing condition
-puts "Creating timing condition..."
-create_timing_condition -name TC_TYPICAL \
-    -opcond OP_TYPICAL \
-    -library_sets LIB_TYPICAL
-
-# RC corner
 puts "Creating RC corner..."
 create_rc_corner -name RC_TYPICAL \
     -temperature 27
 
-# Delay corner
 puts "Creating delay corner..."
 create_delay_corner -name DELAY_TYPICAL \
-    -timing_condition TC_TYPICAL \
+    -library_set LIB_TYPICAL \
     -rc_corner RC_TYPICAL
 
-# Constraint mode
 puts "Creating constraint mode..."
 if { $sdc_file != "" } {
     create_constraint_mode -name CONSTRAINTS \
@@ -1815,13 +1801,11 @@ if { $sdc_file != "" } {
         -sdc_files {}
 }
 
-# Analysis view
 puts "Creating analysis view..."
 create_analysis_view -name VIEW_TYPICAL \
     -constraint_mode CONSTRAINTS \
     -delay_corner DELAY_TYPICAL
 
-# Set analysis view
 puts "Setting analysis view..."
 set_analysis_view -setup VIEW_TYPICAL -hold VIEW_TYPICAL
 
