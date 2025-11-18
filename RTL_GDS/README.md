@@ -2358,7 +2358,7 @@ cd ~/JSilicon2
 
 # 생성된 파일
 echo "=== Generated Files ==="
-ls -lh results/def/tt_um_Jsilicon.def ✗ 없음 (아직 생성전)
+ls -lh results/def/tt_um_Jsilicon.def
 ls -lh results/netlist/tt_um_Jsilicon_synth.v
 
 # Summary 리포트
