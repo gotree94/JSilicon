@@ -3228,1049 +3228,6 @@ fit
 
 ---
 
-# JSilicon 타이밍 위반 해결 가이드 (Timing Violation Fix Guide)
-
-* 필요한 파일
-```
-tt_um_Jsilicon_synth_optimized.sdc
-fix_timing.tcl
-```
-
-* 현재 상태
-```
-Setup WNS:  -0.011 ns (200MHz)
-Hold WNS:   -0.395 ns
-
-Target: Setup & Hold violations 모두 해결
-```
-
-* 수정 방법 1: SDC 파일 수정
-   * 파일: work/synthesis/tt_um_Jsilicon_synth.sdc
-
-```
-# 현재 설정
--------------------
-create_clock -name clk -period 5.0 [get_ports clk]         # 200MHz
-set_clock_uncertainty 0.5 [get_clocks clk]
-set_input_delay -clock clk -max 1.5 [all_inputs]          # 1.5ns
-
-
-# 수정 후 (옵션 A: 150MHz)
--------------------
-create_clock -name clk -period 6.67 [get_ports clk]        # 150MHz
-set_clock_uncertainty 0.5 [get_clocks clk]
-set_input_delay -clock clk -max 1.0 [all_inputs]          # 1.0ns
-set_output_delay -clock clk -max 1.0 [all_outputs]
-
-
-# 수정 후 (옵션 B: 160MHz - 더 도전적)
--------------------
-create_clock -name clk -period 6.25 [get_ports clk]        # 160MHz
-set_clock_uncertainty 0.5 [get_clocks clk]
-set_input_delay -clock clk -max 1.0 [all_inputs]
-set_output_delay -clock clk -max 1.0 [all_outputs]
-```
-
-* 수정 방법 2: 타이밍 최적화 스크립트
-   * 파일: scripts/innovus/fix_timing.tcl (새로 생성)
-
-```
-#!/bin/tcsh
-################################################################################
-# 타이밍 최적화 스크립트
-################################################################################
-
-# 1. 기존 디자인 복원
-restoreDesign jsilicon_final.enc.dat tt_um_Jsilicon
-
-puts "=========================================="
-puts "타이밍 최적화 시작"
-puts "=========================================="
-
-################################################################################
-# Setup Timing 개선
-################################################################################
-
-puts "1. Setup Timing 최적화..."
-
-# 최적화 모드 설정
-setOptMode -addInstancePrefix OPT_SETUP
-setOptMode -fixFanoutLoad true
-setOptMode -usefulSkew true
-setOptMode -effort high
-
-# Setup 최적화 실행
-optDesign -postRoute -setup -drv
-
-puts "  ✓ Setup 최적화 완료"
-
-################################################################################
-# Hold Timing 개선
-################################################################################
-
-puts "2. Hold Timing 최적화..."
-
-# Hold 최적화 모드
-setOptMode -addInstancePrefix OPT_HOLD
-setOptMode -fixHoldAllowSetupTnsDegrade false
-
-# Hold 최적화 실행
-optDesign -postRoute -hold
-
-puts "  ✓ Hold 최적화 완료"
-
-################################################################################
-# 타이밍 재확인
-################################################################################
-
-puts "3. 타이밍 재확인..."
-
-# Setup timing
-report_timing -late -max_paths 10 > reports_opt/timing_setup_fixed.rpt
-
-# Hold timing
-report_timing -early -max_paths 10 > reports_opt/timing_hold_fixed.rpt
-
-# Summary
-report_timing -late > reports_opt/timing_summary_fixed.rpt
-
-################################################################################
-# 최종 저장
-################################################################################
-
-puts "4. 최적화된 디자인 저장..."
-
-saveDesign work/pnr/jsilicon_optimized.enc
-
-# DEF 저장
-defOut -floorplan -netlist -routing results/def/tt_um_Jsilicon_optimized.def
-
-# Netlist 저장
-saveNetlist results/netlist/tt_um_Jsilicon_optimized.v
-
-puts ""
-puts "=========================================="
-puts "✓ 타이밍 최적화 완료"
-puts "=========================================="
-puts ""
-puts "결과 확인:"
-puts "  cat reports_opt/timing_summary_fixed.rpt"
-puts ""
-
-exit
-```
-
-* 수정 방법 3: CTS 재실행
-   * 파일: scripts/innovus/run_cts.tcl (새로 생성)
-```
-#!/bin/tcsh
-################################################################################
-# Clock Tree Synthesis 스크립트
-################################################################################
-
-# 1. 기존 디자인 복원 (Placement 단계)
-restoreDesign jsilicon_placed.enc.dat tt_um_Jsilicon
-
-puts "=========================================="
-puts "Clock Tree Synthesis 재실행"
-puts "=========================================="
-
-################################################################################
-# CTS 설정
-################################################################################
-
-puts "1. CTS 설정..."
-
-# 사용할 버퍼/인버터 지정
-set_ccopt_property buffer_cells {BUFX2 BUFX4}
-set_ccopt_property inverter_cells {INVX1 INVX2 INVX4}
-
-# CTS 목표 설정
-set_ccopt_property target_max_trans 0.2
-set_ccopt_property target_skew 0.1
-
-puts "  ✓ CTS 설정 완료"
-
-################################################################################
-# CTS 실행
-################################################################################
-
-puts "2. CTS 실행..."
-
-# Clock tree spec 생성
-create_ccopt_clock_tree_spec -immediate
-
-# CTS 실행
-catch {
-    ccopt_design
-} result
-
-if { $result == 0 } {
-    puts "  ✓ CTS 성공"
-} else {
-    puts "  ⚠ CTS 실패 - clock_opt_design으로 재시도"
-    
-    # 대안: clock_opt_design 사용
-    clock_opt_design
-}
-
-################################################################################
-# Post-CTS 최적화
-################################################################################
-
-puts "3. Post-CTS 최적화..."
-
-# 최적화 모드 설정
-setOptMode -addInstancePrefix OPT_CTS
-setOptMode -effort high
-
-# Post-CTS 최적화
-optDesign -postCTS
-
-puts "  ✓ Post-CTS 최적화 완료"
-
-################################################################################
-# Hold Timing 수정
-################################################################################
-
-puts "4. Hold Timing 수정..."
-
-# Hold 최적화
-setOptMode -fixHoldAllowSetupTnsDegrade false
-optDesign -postCTS -hold
-
-puts "  ✓ Hold 최적화 완료"
-
-################################################################################
-# 저장
-################################################################################
-
-puts "5. CTS 결과 저장..."
-
-saveDesign work/pnr/jsilicon_cts_fixed.enc
-
-puts ""
-puts "=========================================="
-puts "✓ CTS 재실행 완료"
-puts "=========================================="
-
-# 다음 단계 계속 (Routing)
-source ../../scripts/innovus/continue_pnr.tcl
-```
-
-* 수정 방법 4: 전체 플로우 재실행
-   * 파일: scripts/innovus/pnr_flow_optimized.tcl
-```
-기존 pnr_flow.tcl 수정 사항:
-
-1) SDC 파일 경로를 새로운 파일로 변경
--------------------
-# 기존
-set init_mmmc_file $project_root/scripts/innovus/mmmc.tcl
-
-# mmmc.tcl 내에서:
-set sdc_file $project_root/work/synthesis/tt_um_Jsilicon_synth_optimized.sdc
-
-
-2) CTS 섹션 강화
--------------------
-# Step 5: Clock Tree Synthesis 수정
-
-puts "Step 5: Clock Tree Synthesis"
-
-# CTS 설정 강화
-set_ccopt_property buffer_cells {BUFX2 BUFX4}
-set_ccopt_property inverter_cells {INVX1 INVX2 INVX4}
-set_ccopt_property target_max_trans 0.2
-set_ccopt_property target_skew 0.1
-set_ccopt_property use_inverters true
-
-# CTS 실행
-create_ccopt_clock_tree_spec -immediate
-ccopt_design
-
-# Hold 최적화 추가
-setOptMode -fixHoldAllowSetupTnsDegrade false
-optDesign -postCTS -hold
-
-
-3) Post-Route 최적화 강화
--------------------
-# Step 8: Post-Route Optimization 수정
-
-puts "Step 8: Post-Route Optimization"
-
-# Setup & Hold 동시 최적화
-setOptMode -effort high
-setOptMode -usefulSkew true
-
-optDesign -postRoute -setup
-optDesign -postRoute -hold
-
-# 추가 최적화
-optDesign -postRoute -drv
-```
-
-* 실행 순서
-  * 방법 A: 빠른 수정 (기존 결과 활용)
--------------------
-1. SDC 파일 수정
-   * cd ~/JSilicon2/work/synthesis
-   * vi tt_um_Jsilicon_synth.sdc
-   * 클럭 주기: 5.0 → 6.67 (150MHz)
-   * 입력 지연: 1.5 → 1.0
-
-2. 타이밍 최적화 실행
-   * cd ~/JSilicon2/work/pnr
-   * innovus -init ../../scripts/innovus/fix_timing.tcl
-
-* 방법 B: CTS 재실행
--------------------
-  * 1. SDC 파일 수정 (위와 동일)
-
-  * 2. CTS 재실행
-   * cd ~/JSilicon2/work/pnr
-   * innovus -init ../../scripts/innovus/run_cts.tcl
-
-
-* 방법 C: 전체 재실행 (가장 확실)
--------------------
-* 1. 새로운 SDC 파일 생성
-   * cp work/synthesis/tt_um_Jsilicon_synth.sdc \
-      * work/synthesis/tt_um_Jsilicon_synth_optimized.sdc
-   
-   * vi work/synthesis/tt_um_Jsilicon_synth_optimized.sdc
-   * 수정 적용
-
-* 2. Synthesis 재실행
-   * cd ~/JSilicon2/work/synthesis
-   * genus -f ../../scripts/genus/synthesis.tcl
-
-* 3. P&R 재실행
-   * cd ~/JSilicon2/work/pnr
-   * innovus -init ../../scripts/innovus/pnr_flow_optimized.tcl
-
-* 예상 결과
-
-* 수정 전:
-  * Setup WNS: -0.011 ns @ 200MHz
-  * Hold WNS:  -0.395 ns
-
-* 수정 후 (150MHz + CTS):
-  * Setup WNS: +0.5 ~ +1.0 ns (여유 확보)
-  * Hold WNS:  +0.1 ~ +0.2 ns (Pass)
-
-
-* 확인 방법
-
-* # 타이밍 확인
-* cat reports_opt/timing_summary_fixed.rpt
-
-* # WNS 추출
-* grep -i "slack" reports_opt/timing_summary_fixed.rpt
-
-* # 상세 경로
-* less reports_opt/timing_setup_fixed.rpt
-* less reports_opt/timing_hold_fixed.rpt
-
----
-
-## 📈 다음 단계
-
-1. **타이밍 최적화**
-   ```tcl
-   # Innovus에서
-   restoreDesign jsilicon_final.enc
-   optDesign -postRoute -setup -hold
-   saveDesign jsilicon_final_opt.enc
-   ```
-
-2. **Clock Tree Synthesis**
-   ```tcl
-   set_ccopt_property buffer_cells {BUFX2 BUFX4}
-   set_ccopt_property inverter_cells {INVX1 INVX2}
-   clock_opt_design
-   ```
-
-3. **검증**
-   - LVS (Layout vs Schematic)
-   - Parasitic extraction
-   - Post-layout simulation
-
-4. **GDS 생성**
-   ```tcl
-   streamOut final.gds -mapFile gds.map -merge
-   ```
-
-```
-################################################################################
-# JSilicon 최종 검증 및 GDS 생성 플로우
-# Complete Verification and Tape-out Flow
-################################################################################
-
-========================================
-작업 디렉토리 및 순서
-========================================
-```
-
-* 모든 작업은 다음 디렉토리에서 수행:
-```
-  ~/JSilicon2/work/pnr
-
-기본 구조:
-  ~/JSilicon2/
-  ├── work/pnr/              ← 여기서 작업!
-  │   ├── *.enc.dat          (checkpoint 파일들)
-  │   └── innovus.cmd        (명령 히스토리)
-  ├── scripts/innovus/
-  │   ├── fix_timing.tcl
-  │   ├── run_lvs.tcl
-  │   └── run_cts.tcl
-  ├── results/
-  │   ├── gds/               (최종 GDS)
-  │   ├── lvs/               (LVS 결과)
-  │   └── netlist/
-  ├── reports/
-  │   └── pnr_optimized/     (최적화 후 리포트)
-  └── tech/
-      └── lef/
-          └── gds.map
-```
-
-```
-========================================
-STEP 1: 타이밍 최적화
-========================================
-
-디렉토리: ~/JSilicon2/work/pnr
-
-방법 A: 스크립트 사용 (권장)
--------------------
-cd ~/JSilicon2/work/pnr
-innovus -init ../../scripts/innovus/fix_timing.tcl |& tee timing_opt.log
-
-# 결과 확인
-cat ../../reports/pnr_optimized/timing_summary_fixed.rpt
-
-
-방법 B: 대화형으로 실행
--------------------
-cd ~/JSilicon2/work/pnr
-innovus
-
-# Innovus 콘솔에서:
-restoreDesign jsilicon_final.enc.dat tt_um_Jsilicon
-
-# Setup & Hold 최적화
-setOptMode -effort high
-setOptMode -usefulSkew true
-setOptMode -fixHoldAllowSetupTnsDegrade false
-
-optDesign -postRoute -setup
-optDesign -postRoute -hold
-
-# 타이밍 확인
-report_timing -late -max_paths 5
-report_timing -early -max_paths 5
-
-# 저장
-saveDesign jsilicon_final_opt.enc
-
-# 리포트
-report_timing -late > ../../reports/pnr_optimized/timing_opt.rpt
-
-exit
-```
-```
-========================================
-STEP 2: Clock Tree Synthesis (재실행)
-========================================
-
-디렉토리: ~/JSilicon2/work/pnr
-
-※ 주의: 이미 CTS가 완료된 상태라면 이 단계는 SKIP 가능
-※ Hold violation이 심각하면 CTS 재실행 필요
-
-방법: Placement 단계부터 재시작
--------------------
-cd ~/JSilicon2/work/pnr
-innovus
-
-# Placement 단계 복원
-restoreDesign jsilicon_placed.enc.dat tt_um_Jsilicon
-
-# CTS 설정
-set_ccopt_property buffer_cells {BUFX2 BUFX4}
-set_ccopt_property inverter_cells {INVX1 INVX2 INVX4}
-set_ccopt_property target_max_trans 0.2
-set_ccopt_property target_skew 0.1
-
-# CTS 실행
-create_ccopt_clock_tree_spec -immediate
-ccopt_design
-
-# Post-CTS 최적화
-optDesign -postCTS
-optDesign -postCTS -hold
-
-# 저장
-saveDesign jsilicon_cts_new.enc
-
-# 라우팅 계속
-routeDesign
-optDesign -postRoute
-
-# 최종 저장
-saveDesign jsilicon_final_cts.enc
-
-exit
-```
-```
-========================================
-STEP 3: LVS (Layout vs Schematic)
-========================================
-
-디렉토리: ~/JSilicon2/work/pnr
-
-방법 A: 스크립트 사용 (권장)
--------------------
-cd ~/JSilicon2/work/pnr
-innovus -init ../../scripts/innovus/run_lvs.tcl |& tee lvs.log
-
-# 결과 확인
-cat ../../results/lvs/lvs_summary.rpt
-cat ../../results/lvs/connectivity_check.rpt
-
-
-방법 B: 대화형으로 실행
--------------------
-cd ~/JSilicon2/work/pnr
-innovus
-
-# 최적화된 디자인 복원
-restoreDesign jsilicon_final_opt.enc.dat tt_um_Jsilicon
-
-# LVS 디렉토리 생성
-file mkdir ../../results/lvs
-
-# Layout netlist 추출
-saveNetlist -excludeLeafCell \
-    -includePhysicalInst \
-    -includePowerGround \
-    ../../results/lvs/layout_extracted.sp
-
-# Connectivity check
-verifyConnectivity -report ../../results/lvs/connectivity.rpt
-
-# P/G connectivity
-verifyConnectivity -type special \
-    -report ../../results/lvs/pg_connectivity.rpt
-
-exit
-```
-```
-========================================
-STEP 4: Parasitic Extraction
-========================================
-
-디렉토리: ~/JSilicon2/work/pnr
-
-방법: Innovus 내장 RC Extraction
--------------------
-cd ~/JSilicon2/work/pnr
-innovus
-
-# 디자인 복원
-restoreDesign jsilicon_final_opt.enc.dat tt_um_Jsilicon
-
-# RC Extraction 디렉토리
-file mkdir ../../results/extraction
-
-# Extract RC parasitics
-extractRC
-
-# SPEF 파일 생성
-rcOut -spef ../../results/extraction/tt_um_Jsilicon.spef
-
-# SDF 파일 생성 (타이밍 백-어노테이션용)
-write_sdf -version 3.0 \
-    ../../results/extraction/tt_um_Jsilicon.sdf
-
-# 저장
-saveDesign jsilicon_extracted.enc
-
-exit
-```
-# SPEF 파일 확인
-```
-ls -lh ../../results/extraction/
-```
-```
-========================================
-STEP 5: Post-Layout Simulation (선택)
-========================================
-
-디렉토리: ~/JSilicon2/work/simulation
-
-※ 이 단계는 Verilog 시뮬레이터 필요 (VCS, NC-Verilog, ModelSim 등)
-※ SPEF를 사용한 백-어노테이션 시뮬레이션
-
-준비물:
-  1. Post-P&R netlist: results/netlist/tt_um_Jsilicon_final.v
-  2. SDF file: results/extraction/tt_um_Jsilicon.sdf
-  3. Testbench: rtl/tb/testbench.v
-
-실행 예시 (VCS):
--------------------
-cd ~/JSilicon2/work/simulation
-
-# 컴파일
-vcs -full64 \
-    -timescale=1ns/1ps \
-    ../../results/netlist/tt_um_Jsilicon_final.v \
-    ../../rtl/tb/testbench.v \
-    -sdf max:../../results/extraction/tt_um_Jsilicon.sdf
-
-# 실행
-./simv +vcs+dumpvars
-
-# 파형 확인
-dve -vpd vcdplus.vpd &
-```
-```
-========================================
-STEP 6: GDS 생성 (Tape-out)
-========================================
-
-디렉토리: ~/JSilicon2/work/pnr
-
-방법: streamOut 사용
--------------------
-cd ~/JSilicon2/work/pnr
-innovus
-
-# 최종 디자인 복원
-restoreDesign jsilicon_final_opt.enc.dat tt_um_Jsilicon
-
-# GDS 디렉토리 생성
-file mkdir ../../results/gds
-
-# GDS Map 파일 확인
-# 파일 위치: ../../tech/lef/gds.map
-
-# GDS 생성
-streamOut ../../results/gds/tt_um_Jsilicon.gds \
-    -mapFile ../../tech/lef/gds.map \
-    -stripes 1 \
-    -units 1000 \
-    -mode ALL \
-    -merge {../../tech/gds/gscl45nm_stdcells.gds}
-
-# 압축 (선택)
-gzip ../../results/gds/tt_um_Jsilicon.gds
-
-exit
-
-# GDS 파일 확인
-ls -lh ../../results/gds/
-file ../../results/gds/tt_um_Jsilicon.gds
-```
-```
-========================================
-전체 플로우 실행 스크립트
-========================================
-
-파일: scripts/innovus/complete_flow.tcl
-
-#!/bin/tcsh
-###############################################################################
-# 완전한 검증 및 Tape-out 플로우
-###############################################################################
-
-set DESIGN_NAME "tt_um_Jsilicon"
-set project_root [file normalize ../../]
-
-puts "=========================================="
-puts "Complete Verification & Tape-out Flow"
-puts "=========================================="
-
-# 1. 타이밍 최적화
-puts "\n1. Timing Optimization..."
-source ../../scripts/innovus/fix_timing.tcl
-
-# 2. LVS 검증
-puts "\n2. LVS Check..."
-source ../../scripts/innovus/run_lvs.tcl
-
-# 3. RC Extraction
-puts "\n3. RC Extraction..."
-restoreDesign jsilicon_final_opt.enc.dat $DESIGN_NAME
-
-file mkdir $project_root/results/extraction
-
-extractRC
-rcOut -spef $project_root/results/extraction/tt_um_Jsilicon.spef
-write_sdf -version 3.0 $project_root/results/extraction/tt_um_Jsilicon.sdf
-
-saveDesign jsilicon_extracted.enc
-
-# 4. GDS 생성
-puts "\n4. GDS Generation..."
-
-file mkdir $project_root/results/gds
-
-streamOut $project_root/results/gds/tt_um_Jsilicon.gds \
-    -mapFile $project_root/tech/lef/gds.map \
-    -stripes 1 \
-    -units 1000 \
-    -mode ALL
-
-puts "\n=========================================="
-puts "Complete Flow Finished!"
-puts "=========================================="
-puts "\nGenerated Files:"
-puts "  GDS:  results/gds/tt_um_Jsilicon.gds"
-puts "  SPEF: results/extraction/tt_um_Jsilicon.spef"
-puts "  SDF:  results/extraction/tt_um_Jsilicon.sdf"
-puts "=========================================="
-
-exit
-```
-
-* 한번에 실행하기
-
-```
-cd ~/JSilicon2/work/pnr
-innovus -init ../../scripts/innovus/complete_flow.tcl |& tee complete_flow.log
-```
-
-* 체크리스트
-
-* □ Step 1: 타이밍 최적화 완료
-  * 파일: jsilicon_final_opt.enc.dat
-  * 리포트: reports/pnr_optimized/timing_opt.rpt
-  
-* □ Step 2: CTS (필요시만)
-  * 파일: jsilicon_cts_new.enc.dat
-  
-* □ Step 3: LVS 검증 완료
-  * 리포트: results/lvs/lvs_summary.rpt
-  * Status: Clean or Minor issues
-  
-* □ Step 4: RC Extraction 완료
-  * 파일: results/extraction/tt_um_Jsilicon.spef
-  * 파일: results/extraction/tt_um_Jsilicon.sdf
-  
-* □ Step 5: Post-layout Simulation (선택)
-  * 결과: 타이밍 검증 완료
-  
-* □ Step 6: GDS 생성 완료
-  * 파일: results/gds/tt_um_Jsilicon.gds
-  * 크기: ~500KB - 5MB
-  
-* □ 최종 검증
-  * DRC: Clean ✓
-  * LVS: Clean ✓
-  * Timing: Met ✓
-  
-
-* 각 단계별 예상 시간
-
-* Step 1 (타이밍 최적화):     5-15분
-* Step 2 (CTS 재실행):       10-20분 (필요시만)
-* Step 3 (LVS):              2-5분
-* Step 4 (RC Extraction):    5-10분
-* Step 5 (Simulation):       10-30분 (선택)
-* Step 6 (GDS):              1-3분
-
-* 전체 소요 시간: 약 25-45분 (CTS 제외)
-
-
-* 파일 크기 예상
-
-* jsilicon_final_opt.enc.dat     ~50-200MB
-* tt_um_Jsilicon.spef            ~500KB-2MB
-* tt_um_Jsilicon.sdf             ~200KB-1MB
-* tt_um_Jsilicon.gds             ~500KB-5MB
-* layout_extracted.sp            ~100KB-500KB
-
-
-* 주의사항
-
-1. 디스크 공간 확인
-   df -h ~/JSilicon2
-   최소 1GB 여유 공간 필요
-
-2. CTS는 선택적
-   - Hold violation이 크면 재실행
-   - 작으면 (< 0.5ns) 최적화만으로 충분
-
-3. GDS Map 파일 확인
-   - tech/lef/gds.map 파일 존재 확인
-   - Layer mapping이 올바른지 확인
-
-4. Backup
-   중요한 checkpoint는 백업
-   cp jsilicon_final_opt.enc.dat jsilicon_final_opt.backup.enc.dat
-
----
-
-## 📝 참고 자료
-
-- [FreePDK45 Documentation](http://www.eda.ncsu.edu/wiki/FreePDK45)
-- [Cadence Innovus User Guide](https://www.cadence.com/)
-- [RISC-V Specification](https://riscv.org/specifications/)
-
----
-
-## 🎯 결론
-
-JSilicon 프로젝트는 FreePDK45 공정을 사용한 RISC-V 코어의 성공적인 ASIC 구현을 보여줍니다:
-
-### ✅ 성공 사항
-- 완전한 RTL-to-Layout 플로우 완료
-- DRC Clean (0 violations)
-- 저전력 설계 (0.561 mW)
-- 소면적 구현 (5,390 μm²)
-
-### ⚠️ 개선 필요
-- 타이밍 위반 해결 (Setup: -0.011ns, Hold: -0.395ns)
-- CTS 최적화
-- Power grid 연결 개선
-
-전반적으로 **첫 번째 테이프아웃 준비 80% 완료** 상태이며, 타이밍 최적화 후 **제조 가능한 수준**에 도달할 것으로 예상됩니다.
-
----
-
-*Last Updated: November 18, 2025*
-**GUI 확인 사항:**
-- [ ] 셀들이 균일하게 배치되었는가?
-- [ ] 클록 트리가 대칭적으로 구성되었는가?
-- [ ] 배선 혼잡도가 과도하지 않은가?
-- [ ] DRC 위반이 없는가?
-
----
-
-## 📊 결과 분석
-
-### 종합 성능 지표
-
-#### JSilicon 최종 결과
-
-| 항목 | 목표 | 실제 결과 | 달성 여부 |
-|------|------|-----------|-----------|
-| **클록 주파수** | 200 MHz | 200 MHz | ✅ |
-| **타이밍 (WNS)** | > 0 | +216 ps | ✅ |
-| **게이트 수** | < 1000 | 595 | ✅ |
-| **면적** | < 5000 um² | 2958 um² | ✅ |
-| **전력** | < 150 mW | ~100 mW | ✅ |
-
-### 상세 메트릭
-
-#### 1. 타이밍 메트릭
-
-```
-Clock Period:              5.000 ns (200 MHz)
-Setup WNS:                 0.217 ns ✓
-Setup TNS:                 0.000 ns ✓
-Hold WNS:                  0.050 ns ✓
-Hold TNS:                  0.000 ns ✓
-Max Fanout:                42 (clk)
-Critical Path Stages:      ~15 gates
-```
-
-#### 2. 면적 메트릭
-
-```
-Total Die Area:            2958.316 um²
-Standard Cell Area:        1785.687 um²
-Utilization:               60.4%
-Number of Cells:           595
-  - Sequential:            42 (7.1%)
-  - Combinational:         553 (92.9%)
-Number of Nets:            ~700
-Average Fanout:            1.8
-```
-
-#### 3. 전력 메트릭 (@ 200MHz, 1.1V, 27°C)
-
-```
-Total Power:               ~100 mW
-  - Dynamic Power:         ~70 mW (70%)
-    * Switching:           ~50 mW
-    * Internal:            ~20 mW
-  - Leakage Power:         ~30 mW (30%)
-
-Power Breakdown by Module:
-  - ALU:                   ~25 mW (25%)
-  - Register File:         ~20 mW (20%)
-  - FSM:                   ~15 mW (15%)
-  - Others:                ~40 mW (40%)
-```
-
-#### 4. 물리적 특성
-
-```
-Die Dimensions:            ~54 x 54 um
-Aspect Ratio:              1.0
-Number of Metal Layers:    10
-Routing Congestion:        Low (<50%)
-Clock Tree:
-  - Clock Sinks:           42
-  - Clock Skew:            <100 ps
-  - Clock Latency:         ~500 ps
-```
-
-### 비교 분석
-
-#### 공정 기술 비교
-
-| 공정 | JSilicon (45nm) | 예상 (28nm) | 예상 (7nm) |
-|------|-----------------|-------------|------------|
-| 면적 | 2958 um² | ~1600 um² | ~400 um² |
-| 전력 | 100 mW | ~50 mW | ~15 mW |
-| 주파수 | 200 MHz | ~500 MHz | ~2 GHz |
-
-#### 최적화 여지
-
-| 항목 | 현재 | 최적화 후 예상 | 방법 |
-|------|------|---------------|------|
-| 면적 | 2958 um² | ~2500 um² | Clock gating, 논리 간소화 |
-| 전력 | 100 mW | ~70 mW | 동적 전압/주파수 조정 |
-| 주파수 | 200 MHz | ~250 MHz | Pipeline 추가 |
-
----
-
-## 🔧 문제 해결
-
-### 자주 발생하는 오류
-
-#### 1. 합성 오류
-
-**오류:** `Could not find module 'tt_um_Jsilicon'`
-
-**원인:** RTL 파일 읽기 실패 또는 모듈명 불일치
-
-**해결:**
-```bash
-# RTL 파일 확인
-ls -lh src/*.v
-
-# 모듈명 확인
-grep "^module" src/jsilicon.v
-
-# 스크립트에서 올바른 이름 사용
-# elaborate tt_um_Jsilicon  (대소문자 정확히!)
-```
-
-#### 2. 타이밍 위반
-
-**오류:** `WNS: -0.5 ns (Timing violated)`
-
-**원인:** Critical path 지연이 클록 주기를 초과
-
-**해결 방법:**
-
-1. **클록 주기 증가** (가장 간단)
-```tcl
-# jsilicon.sdc 수정
-create_clock -name clk -period 6.0 [get_ports clk]  # 5.0 → 6.0
-```
-
-2. **합성 최적화 강화**
-```tcl
-# synthesis.tcl 수정
-set_db syn_generic_effort high
-set_db syn_map_effort high
-set_db syn_opt_effort high
-```
-
-3. **RTL 최적화**
-- 조합 논리 경로 단축
-- Pipeline stage 추가
-- 병렬 처리 구조로 변경
-
-#### 3. LEF/Liberty 파일 오류
-
-**오류:** `Cannot find library file 'gscl45nm.lib'`
-
-**원인:** 파일 경로 문제
-
-**해결:**
-```bash
-# 파일 존재 확인
-ls -lh ~/JSilicon2/tech/lib/gscl45nm.lib
-ls -lh ~/JSilicon2/tech/lef/gscl45nm.lef
-
-# 절대 경로 사용
-set tech_lib [file normalize ~/JSilicon2/tech/lib/gscl45nm.lib]
-```
-
-#### 4. Innovus OA 오류
-
-**오류:** `OpenAccess (OA) shared library installation is older`
-
-**원인:** OA_HOME 환경 변수 충돌
-
-**해결:**
-```bash
-# OA_HOME 제거
-unset OA_HOME
-
-# .bashrc에 추가
-echo "unset OA_HOME" >> ~/.bashrc
-source ~/.bashrc
-```
-
-#### 5. 라이선스 오류
-
-**오류:** `License checkout failed`
-
-**원인:** 라이선스 서버 연결 실패
-
-**해결:**
-```bash
-# 라이선스 서버 확인
-echo $CDS_LIC_FILE
-
-# Ping 테스트
-ping license.server.edu
-
-# 라이선스 상태 확인
-lmstat -a
-```
-
-### 디버깅 팁
-
-#### 로그 파일 확인
-
-```bash
-# Genus 로그
-tail -100 work/synthesis/genus.log
-
-# Innovus 로그
-tail -100 work/pnr/innovus.log
-
-# 오류 메시지 검색
-grep -i "error" work/synthesis/genus.log
-grep -i "warning" work/synthesis/genus.log
-```
-
-#### 단계별 체크포인트
-
-```bash
-# 합성 후 확인
-ls -lh results/netlist/tt_um_Jsilicon_synth.v
-cat reports/synthesis/qor.rpt | tail -30
-
-# P&R 후 확인
-ls -lh results/def/tt_um_Jsilicon.def
-cat reports/pnr/summary.rpt
-```
-
-
----
-
 ## 📚 GDS 생성 단계별 수동 실행
 
 ### Step 1: 타이밍 최적화 (필수)
@@ -5562,6 +4519,1047 @@ cat ~/JSilicon2/reports/final/geometry_final.rpt
 # GDS 정보
 ls -lh ~/JSilicon2/results/gds/tt_um_Jsilicon.gds
 ```
+
+# [Skip] JSilicon 타이밍 위반 해결 가이드 (Timing Violation Fix Guide)
+
+* 필요한 파일
+```
+tt_um_Jsilicon_synth_optimized.sdc
+fix_timing.tcl
+```
+
+* 현재 상태
+```
+Setup WNS:  -0.011 ns (200MHz)
+Hold WNS:   -0.395 ns
+
+Target: Setup & Hold violations 모두 해결
+```
+
+* 수정 방법 1: SDC 파일 수정
+   * 파일: work/synthesis/tt_um_Jsilicon_synth.sdc
+
+```
+# 현재 설정
+-------------------
+create_clock -name clk -period 5.0 [get_ports clk]         # 200MHz
+set_clock_uncertainty 0.5 [get_clocks clk]
+set_input_delay -clock clk -max 1.5 [all_inputs]          # 1.5ns
+
+
+# 수정 후 (옵션 A: 150MHz)
+-------------------
+create_clock -name clk -period 6.67 [get_ports clk]        # 150MHz
+set_clock_uncertainty 0.5 [get_clocks clk]
+set_input_delay -clock clk -max 1.0 [all_inputs]          # 1.0ns
+set_output_delay -clock clk -max 1.0 [all_outputs]
+
+
+# 수정 후 (옵션 B: 160MHz - 더 도전적)
+-------------------
+create_clock -name clk -period 6.25 [get_ports clk]        # 160MHz
+set_clock_uncertainty 0.5 [get_clocks clk]
+set_input_delay -clock clk -max 1.0 [all_inputs]
+set_output_delay -clock clk -max 1.0 [all_outputs]
+```
+
+* 수정 방법 2: 타이밍 최적화 스크립트
+   * 파일: scripts/innovus/fix_timing.tcl (새로 생성)
+
+```
+#!/bin/tcsh
+################################################################################
+# 타이밍 최적화 스크립트
+################################################################################
+
+# 1. 기존 디자인 복원
+restoreDesign jsilicon_final.enc.dat tt_um_Jsilicon
+
+puts "=========================================="
+puts "타이밍 최적화 시작"
+puts "=========================================="
+
+################################################################################
+# Setup Timing 개선
+################################################################################
+
+puts "1. Setup Timing 최적화..."
+
+# 최적화 모드 설정
+setOptMode -addInstancePrefix OPT_SETUP
+setOptMode -fixFanoutLoad true
+setOptMode -usefulSkew true
+setOptMode -effort high
+
+# Setup 최적화 실행
+optDesign -postRoute -setup -drv
+
+puts "  ✓ Setup 최적화 완료"
+
+################################################################################
+# Hold Timing 개선
+################################################################################
+
+puts "2. Hold Timing 최적화..."
+
+# Hold 최적화 모드
+setOptMode -addInstancePrefix OPT_HOLD
+setOptMode -fixHoldAllowSetupTnsDegrade false
+
+# Hold 최적화 실행
+optDesign -postRoute -hold
+
+puts "  ✓ Hold 최적화 완료"
+
+################################################################################
+# 타이밍 재확인
+################################################################################
+
+puts "3. 타이밍 재확인..."
+
+# Setup timing
+report_timing -late -max_paths 10 > reports_opt/timing_setup_fixed.rpt
+
+# Hold timing
+report_timing -early -max_paths 10 > reports_opt/timing_hold_fixed.rpt
+
+# Summary
+report_timing -late > reports_opt/timing_summary_fixed.rpt
+
+################################################################################
+# 최종 저장
+################################################################################
+
+puts "4. 최적화된 디자인 저장..."
+
+saveDesign work/pnr/jsilicon_optimized.enc
+
+# DEF 저장
+defOut -floorplan -netlist -routing results/def/tt_um_Jsilicon_optimized.def
+
+# Netlist 저장
+saveNetlist results/netlist/tt_um_Jsilicon_optimized.v
+
+puts ""
+puts "=========================================="
+puts "✓ 타이밍 최적화 완료"
+puts "=========================================="
+puts ""
+puts "결과 확인:"
+puts "  cat reports_opt/timing_summary_fixed.rpt"
+puts ""
+
+exit
+```
+
+* 수정 방법 3: CTS 재실행
+   * 파일: scripts/innovus/run_cts.tcl (새로 생성)
+```
+#!/bin/tcsh
+################################################################################
+# Clock Tree Synthesis 스크립트
+################################################################################
+
+# 1. 기존 디자인 복원 (Placement 단계)
+restoreDesign jsilicon_placed.enc.dat tt_um_Jsilicon
+
+puts "=========================================="
+puts "Clock Tree Synthesis 재실행"
+puts "=========================================="
+
+################################################################################
+# CTS 설정
+################################################################################
+
+puts "1. CTS 설정..."
+
+# 사용할 버퍼/인버터 지정
+set_ccopt_property buffer_cells {BUFX2 BUFX4}
+set_ccopt_property inverter_cells {INVX1 INVX2 INVX4}
+
+# CTS 목표 설정
+set_ccopt_property target_max_trans 0.2
+set_ccopt_property target_skew 0.1
+
+puts "  ✓ CTS 설정 완료"
+
+################################################################################
+# CTS 실행
+################################################################################
+
+puts "2. CTS 실행..."
+
+# Clock tree spec 생성
+create_ccopt_clock_tree_spec -immediate
+
+# CTS 실행
+catch {
+    ccopt_design
+} result
+
+if { $result == 0 } {
+    puts "  ✓ CTS 성공"
+} else {
+    puts "  ⚠ CTS 실패 - clock_opt_design으로 재시도"
+    
+    # 대안: clock_opt_design 사용
+    clock_opt_design
+}
+
+################################################################################
+# Post-CTS 최적화
+################################################################################
+
+puts "3. Post-CTS 최적화..."
+
+# 최적화 모드 설정
+setOptMode -addInstancePrefix OPT_CTS
+setOptMode -effort high
+
+# Post-CTS 최적화
+optDesign -postCTS
+
+puts "  ✓ Post-CTS 최적화 완료"
+
+################################################################################
+# Hold Timing 수정
+################################################################################
+
+puts "4. Hold Timing 수정..."
+
+# Hold 최적화
+setOptMode -fixHoldAllowSetupTnsDegrade false
+optDesign -postCTS -hold
+
+puts "  ✓ Hold 최적화 완료"
+
+################################################################################
+# 저장
+################################################################################
+
+puts "5. CTS 결과 저장..."
+
+saveDesign work/pnr/jsilicon_cts_fixed.enc
+
+puts ""
+puts "=========================================="
+puts "✓ CTS 재실행 완료"
+puts "=========================================="
+
+# 다음 단계 계속 (Routing)
+source ../../scripts/innovus/continue_pnr.tcl
+```
+
+* 수정 방법 4: 전체 플로우 재실행
+   * 파일: scripts/innovus/pnr_flow_optimized.tcl
+```
+기존 pnr_flow.tcl 수정 사항:
+
+1) SDC 파일 경로를 새로운 파일로 변경
+-------------------
+# 기존
+set init_mmmc_file $project_root/scripts/innovus/mmmc.tcl
+
+# mmmc.tcl 내에서:
+set sdc_file $project_root/work/synthesis/tt_um_Jsilicon_synth_optimized.sdc
+
+
+2) CTS 섹션 강화
+-------------------
+# Step 5: Clock Tree Synthesis 수정
+
+puts "Step 5: Clock Tree Synthesis"
+
+# CTS 설정 강화
+set_ccopt_property buffer_cells {BUFX2 BUFX4}
+set_ccopt_property inverter_cells {INVX1 INVX2 INVX4}
+set_ccopt_property target_max_trans 0.2
+set_ccopt_property target_skew 0.1
+set_ccopt_property use_inverters true
+
+# CTS 실행
+create_ccopt_clock_tree_spec -immediate
+ccopt_design
+
+# Hold 최적화 추가
+setOptMode -fixHoldAllowSetupTnsDegrade false
+optDesign -postCTS -hold
+
+
+3) Post-Route 최적화 강화
+-------------------
+# Step 8: Post-Route Optimization 수정
+
+puts "Step 8: Post-Route Optimization"
+
+# Setup & Hold 동시 최적화
+setOptMode -effort high
+setOptMode -usefulSkew true
+
+optDesign -postRoute -setup
+optDesign -postRoute -hold
+
+# 추가 최적화
+optDesign -postRoute -drv
+```
+
+* 실행 순서
+  * 방법 A: 빠른 수정 (기존 결과 활용)
+-------------------
+1. SDC 파일 수정
+   * cd ~/JSilicon2/work/synthesis
+   * vi tt_um_Jsilicon_synth.sdc
+   * 클럭 주기: 5.0 → 6.67 (150MHz)
+   * 입력 지연: 1.5 → 1.0
+
+2. 타이밍 최적화 실행
+   * cd ~/JSilicon2/work/pnr
+   * innovus -init ../../scripts/innovus/fix_timing.tcl
+
+* 방법 B: CTS 재실행
+-------------------
+  * 1. SDC 파일 수정 (위와 동일)
+
+  * 2. CTS 재실행
+   * cd ~/JSilicon2/work/pnr
+   * innovus -init ../../scripts/innovus/run_cts.tcl
+
+
+* 방법 C: 전체 재실행 (가장 확실)
+-------------------
+* 1. 새로운 SDC 파일 생성
+   * cp work/synthesis/tt_um_Jsilicon_synth.sdc \
+      * work/synthesis/tt_um_Jsilicon_synth_optimized.sdc
+   
+   * vi work/synthesis/tt_um_Jsilicon_synth_optimized.sdc
+   * 수정 적용
+
+* 2. Synthesis 재실행
+   * cd ~/JSilicon2/work/synthesis
+   * genus -f ../../scripts/genus/synthesis.tcl
+
+* 3. P&R 재실행
+   * cd ~/JSilicon2/work/pnr
+   * innovus -init ../../scripts/innovus/pnr_flow_optimized.tcl
+
+* 예상 결과
+
+* 수정 전:
+  * Setup WNS: -0.011 ns @ 200MHz
+  * Hold WNS:  -0.395 ns
+
+* 수정 후 (150MHz + CTS):
+  * Setup WNS: +0.5 ~ +1.0 ns (여유 확보)
+  * Hold WNS:  +0.1 ~ +0.2 ns (Pass)
+
+
+* 확인 방법
+
+* # 타이밍 확인
+* cat reports_opt/timing_summary_fixed.rpt
+
+* # WNS 추출
+* grep -i "slack" reports_opt/timing_summary_fixed.rpt
+
+* # 상세 경로
+* less reports_opt/timing_setup_fixed.rpt
+* less reports_opt/timing_hold_fixed.rpt
+
+---
+
+## 📈 다음 단계
+
+1. **타이밍 최적화**
+   ```tcl
+   # Innovus에서
+   restoreDesign jsilicon_final.enc
+   optDesign -postRoute -setup -hold
+   saveDesign jsilicon_final_opt.enc
+   ```
+
+2. **Clock Tree Synthesis**
+   ```tcl
+   set_ccopt_property buffer_cells {BUFX2 BUFX4}
+   set_ccopt_property inverter_cells {INVX1 INVX2}
+   clock_opt_design
+   ```
+
+3. **검증**
+   - LVS (Layout vs Schematic)
+   - Parasitic extraction
+   - Post-layout simulation
+
+4. **GDS 생성**
+   ```tcl
+   streamOut final.gds -mapFile gds.map -merge
+   ```
+
+```
+################################################################################
+# JSilicon 최종 검증 및 GDS 생성 플로우
+# Complete Verification and Tape-out Flow
+################################################################################
+
+========================================
+작업 디렉토리 및 순서
+========================================
+```
+
+* 모든 작업은 다음 디렉토리에서 수행:
+```
+  ~/JSilicon2/work/pnr
+
+기본 구조:
+  ~/JSilicon2/
+  ├── work/pnr/              ← 여기서 작업!
+  │   ├── *.enc.dat          (checkpoint 파일들)
+  │   └── innovus.cmd        (명령 히스토리)
+  ├── scripts/innovus/
+  │   ├── fix_timing.tcl
+  │   ├── run_lvs.tcl
+  │   └── run_cts.tcl
+  ├── results/
+  │   ├── gds/               (최종 GDS)
+  │   ├── lvs/               (LVS 결과)
+  │   └── netlist/
+  ├── reports/
+  │   └── pnr_optimized/     (최적화 후 리포트)
+  └── tech/
+      └── lef/
+          └── gds.map
+```
+
+```
+========================================
+STEP 1: 타이밍 최적화
+========================================
+
+디렉토리: ~/JSilicon2/work/pnr
+
+방법 A: 스크립트 사용 (권장)
+-------------------
+cd ~/JSilicon2/work/pnr
+innovus -init ../../scripts/innovus/fix_timing.tcl |& tee timing_opt.log
+
+# 결과 확인
+cat ../../reports/pnr_optimized/timing_summary_fixed.rpt
+
+
+방법 B: 대화형으로 실행
+-------------------
+cd ~/JSilicon2/work/pnr
+innovus
+
+# Innovus 콘솔에서:
+restoreDesign jsilicon_final.enc.dat tt_um_Jsilicon
+
+# Setup & Hold 최적화
+setOptMode -effort high
+setOptMode -usefulSkew true
+setOptMode -fixHoldAllowSetupTnsDegrade false
+
+optDesign -postRoute -setup
+optDesign -postRoute -hold
+
+# 타이밍 확인
+report_timing -late -max_paths 5
+report_timing -early -max_paths 5
+
+# 저장
+saveDesign jsilicon_final_opt.enc
+
+# 리포트
+report_timing -late > ../../reports/pnr_optimized/timing_opt.rpt
+
+exit
+```
+```
+========================================
+STEP 2: Clock Tree Synthesis (재실행)
+========================================
+
+디렉토리: ~/JSilicon2/work/pnr
+
+※ 주의: 이미 CTS가 완료된 상태라면 이 단계는 SKIP 가능
+※ Hold violation이 심각하면 CTS 재실행 필요
+
+방법: Placement 단계부터 재시작
+-------------------
+cd ~/JSilicon2/work/pnr
+innovus
+
+# Placement 단계 복원
+restoreDesign jsilicon_placed.enc.dat tt_um_Jsilicon
+
+# CTS 설정
+set_ccopt_property buffer_cells {BUFX2 BUFX4}
+set_ccopt_property inverter_cells {INVX1 INVX2 INVX4}
+set_ccopt_property target_max_trans 0.2
+set_ccopt_property target_skew 0.1
+
+# CTS 실행
+create_ccopt_clock_tree_spec -immediate
+ccopt_design
+
+# Post-CTS 최적화
+optDesign -postCTS
+optDesign -postCTS -hold
+
+# 저장
+saveDesign jsilicon_cts_new.enc
+
+# 라우팅 계속
+routeDesign
+optDesign -postRoute
+
+# 최종 저장
+saveDesign jsilicon_final_cts.enc
+
+exit
+```
+```
+========================================
+STEP 3: LVS (Layout vs Schematic)
+========================================
+
+디렉토리: ~/JSilicon2/work/pnr
+
+방법 A: 스크립트 사용 (권장)
+-------------------
+cd ~/JSilicon2/work/pnr
+innovus -init ../../scripts/innovus/run_lvs.tcl |& tee lvs.log
+
+# 결과 확인
+cat ../../results/lvs/lvs_summary.rpt
+cat ../../results/lvs/connectivity_check.rpt
+
+
+방법 B: 대화형으로 실행
+-------------------
+cd ~/JSilicon2/work/pnr
+innovus
+
+# 최적화된 디자인 복원
+restoreDesign jsilicon_final_opt.enc.dat tt_um_Jsilicon
+
+# LVS 디렉토리 생성
+file mkdir ../../results/lvs
+
+# Layout netlist 추출
+saveNetlist -excludeLeafCell \
+    -includePhysicalInst \
+    -includePowerGround \
+    ../../results/lvs/layout_extracted.sp
+
+# Connectivity check
+verifyConnectivity -report ../../results/lvs/connectivity.rpt
+
+# P/G connectivity
+verifyConnectivity -type special \
+    -report ../../results/lvs/pg_connectivity.rpt
+
+exit
+```
+```
+========================================
+STEP 4: Parasitic Extraction
+========================================
+
+디렉토리: ~/JSilicon2/work/pnr
+
+방법: Innovus 내장 RC Extraction
+-------------------
+cd ~/JSilicon2/work/pnr
+innovus
+
+# 디자인 복원
+restoreDesign jsilicon_final_opt.enc.dat tt_um_Jsilicon
+
+# RC Extraction 디렉토리
+file mkdir ../../results/extraction
+
+# Extract RC parasitics
+extractRC
+
+# SPEF 파일 생성
+rcOut -spef ../../results/extraction/tt_um_Jsilicon.spef
+
+# SDF 파일 생성 (타이밍 백-어노테이션용)
+write_sdf -version 3.0 \
+    ../../results/extraction/tt_um_Jsilicon.sdf
+
+# 저장
+saveDesign jsilicon_extracted.enc
+
+exit
+```
+# SPEF 파일 확인
+```
+ls -lh ../../results/extraction/
+```
+```
+========================================
+STEP 5: Post-Layout Simulation (선택)
+========================================
+
+디렉토리: ~/JSilicon2/work/simulation
+
+※ 이 단계는 Verilog 시뮬레이터 필요 (VCS, NC-Verilog, ModelSim 등)
+※ SPEF를 사용한 백-어노테이션 시뮬레이션
+
+준비물:
+  1. Post-P&R netlist: results/netlist/tt_um_Jsilicon_final.v
+  2. SDF file: results/extraction/tt_um_Jsilicon.sdf
+  3. Testbench: rtl/tb/testbench.v
+
+실행 예시 (VCS):
+-------------------
+cd ~/JSilicon2/work/simulation
+
+# 컴파일
+vcs -full64 \
+    -timescale=1ns/1ps \
+    ../../results/netlist/tt_um_Jsilicon_final.v \
+    ../../rtl/tb/testbench.v \
+    -sdf max:../../results/extraction/tt_um_Jsilicon.sdf
+
+# 실행
+./simv +vcs+dumpvars
+
+# 파형 확인
+dve -vpd vcdplus.vpd &
+```
+```
+========================================
+STEP 6: GDS 생성 (Tape-out)
+========================================
+
+디렉토리: ~/JSilicon2/work/pnr
+
+방법: streamOut 사용
+-------------------
+cd ~/JSilicon2/work/pnr
+innovus
+
+# 최종 디자인 복원
+restoreDesign jsilicon_final_opt.enc.dat tt_um_Jsilicon
+
+# GDS 디렉토리 생성
+file mkdir ../../results/gds
+
+# GDS Map 파일 확인
+# 파일 위치: ../../tech/lef/gds.map
+
+# GDS 생성
+streamOut ../../results/gds/tt_um_Jsilicon.gds \
+    -mapFile ../../tech/lef/gds.map \
+    -stripes 1 \
+    -units 1000 \
+    -mode ALL \
+    -merge {../../tech/gds/gscl45nm_stdcells.gds}
+
+# 압축 (선택)
+gzip ../../results/gds/tt_um_Jsilicon.gds
+
+exit
+
+# GDS 파일 확인
+ls -lh ../../results/gds/
+file ../../results/gds/tt_um_Jsilicon.gds
+```
+```
+========================================
+전체 플로우 실행 스크립트
+========================================
+
+파일: scripts/innovus/complete_flow.tcl
+
+#!/bin/tcsh
+###############################################################################
+# 완전한 검증 및 Tape-out 플로우
+###############################################################################
+
+set DESIGN_NAME "tt_um_Jsilicon"
+set project_root [file normalize ../../]
+
+puts "=========================================="
+puts "Complete Verification & Tape-out Flow"
+puts "=========================================="
+
+# 1. 타이밍 최적화
+puts "\n1. Timing Optimization..."
+source ../../scripts/innovus/fix_timing.tcl
+
+# 2. LVS 검증
+puts "\n2. LVS Check..."
+source ../../scripts/innovus/run_lvs.tcl
+
+# 3. RC Extraction
+puts "\n3. RC Extraction..."
+restoreDesign jsilicon_final_opt.enc.dat $DESIGN_NAME
+
+file mkdir $project_root/results/extraction
+
+extractRC
+rcOut -spef $project_root/results/extraction/tt_um_Jsilicon.spef
+write_sdf -version 3.0 $project_root/results/extraction/tt_um_Jsilicon.sdf
+
+saveDesign jsilicon_extracted.enc
+
+# 4. GDS 생성
+puts "\n4. GDS Generation..."
+
+file mkdir $project_root/results/gds
+
+streamOut $project_root/results/gds/tt_um_Jsilicon.gds \
+    -mapFile $project_root/tech/lef/gds.map \
+    -stripes 1 \
+    -units 1000 \
+    -mode ALL
+
+puts "\n=========================================="
+puts "Complete Flow Finished!"
+puts "=========================================="
+puts "\nGenerated Files:"
+puts "  GDS:  results/gds/tt_um_Jsilicon.gds"
+puts "  SPEF: results/extraction/tt_um_Jsilicon.spef"
+puts "  SDF:  results/extraction/tt_um_Jsilicon.sdf"
+puts "=========================================="
+
+exit
+```
+
+* 한번에 실행하기
+
+```
+cd ~/JSilicon2/work/pnr
+innovus -init ../../scripts/innovus/complete_flow.tcl |& tee complete_flow.log
+```
+
+* 체크리스트
+
+* □ Step 1: 타이밍 최적화 완료
+  * 파일: jsilicon_final_opt.enc.dat
+  * 리포트: reports/pnr_optimized/timing_opt.rpt
+  
+* □ Step 2: CTS (필요시만)
+  * 파일: jsilicon_cts_new.enc.dat
+  
+* □ Step 3: LVS 검증 완료
+  * 리포트: results/lvs/lvs_summary.rpt
+  * Status: Clean or Minor issues
+  
+* □ Step 4: RC Extraction 완료
+  * 파일: results/extraction/tt_um_Jsilicon.spef
+  * 파일: results/extraction/tt_um_Jsilicon.sdf
+  
+* □ Step 5: Post-layout Simulation (선택)
+  * 결과: 타이밍 검증 완료
+  
+* □ Step 6: GDS 생성 완료
+  * 파일: results/gds/tt_um_Jsilicon.gds
+  * 크기: ~500KB - 5MB
+  
+* □ 최종 검증
+  * DRC: Clean ✓
+  * LVS: Clean ✓
+  * Timing: Met ✓
+  
+
+* 각 단계별 예상 시간
+
+* Step 1 (타이밍 최적화):     5-15분
+* Step 2 (CTS 재실행):       10-20분 (필요시만)
+* Step 3 (LVS):              2-5분
+* Step 4 (RC Extraction):    5-10분
+* Step 5 (Simulation):       10-30분 (선택)
+* Step 6 (GDS):              1-3분
+
+* 전체 소요 시간: 약 25-45분 (CTS 제외)
+
+
+* 파일 크기 예상
+
+* jsilicon_final_opt.enc.dat     ~50-200MB
+* tt_um_Jsilicon.spef            ~500KB-2MB
+* tt_um_Jsilicon.sdf             ~200KB-1MB
+* tt_um_Jsilicon.gds             ~500KB-5MB
+* layout_extracted.sp            ~100KB-500KB
+
+
+* 주의사항
+
+1. 디스크 공간 확인
+   df -h ~/JSilicon2
+   최소 1GB 여유 공간 필요
+
+2. CTS는 선택적
+   - Hold violation이 크면 재실행
+   - 작으면 (< 0.5ns) 최적화만으로 충분
+
+3. GDS Map 파일 확인
+   - tech/lef/gds.map 파일 존재 확인
+   - Layer mapping이 올바른지 확인
+
+4. Backup
+   중요한 checkpoint는 백업
+   cp jsilicon_final_opt.enc.dat jsilicon_final_opt.backup.enc.dat
+
+---
+
+## 📝 참고 자료
+
+- [FreePDK45 Documentation](http://www.eda.ncsu.edu/wiki/FreePDK45)
+- [Cadence Innovus User Guide](https://www.cadence.com/)
+- [RISC-V Specification](https://riscv.org/specifications/)
+
+---
+
+## 🎯 결론
+
+JSilicon 프로젝트는 FreePDK45 공정을 사용한 RISC-V 코어의 성공적인 ASIC 구현을 보여줍니다:
+
+### ✅ 성공 사항
+- 완전한 RTL-to-Layout 플로우 완료
+- DRC Clean (0 violations)
+- 저전력 설계 (0.561 mW)
+- 소면적 구현 (5,390 μm²)
+
+### ⚠️ 개선 필요
+- 타이밍 위반 해결 (Setup: -0.011ns, Hold: -0.395ns)
+- CTS 최적화
+- Power grid 연결 개선
+
+전반적으로 **첫 번째 테이프아웃 준비 80% 완료** 상태이며, 타이밍 최적화 후 **제조 가능한 수준**에 도달할 것으로 예상됩니다.
+
+---
+
+*Last Updated: November 18, 2025*
+**GUI 확인 사항:**
+- [ ] 셀들이 균일하게 배치되었는가?
+- [ ] 클록 트리가 대칭적으로 구성되었는가?
+- [ ] 배선 혼잡도가 과도하지 않은가?
+- [ ] DRC 위반이 없는가?
+
+---
+
+## 📊 결과 분석
+
+### 종합 성능 지표
+
+#### JSilicon 최종 결과
+
+| 항목 | 목표 | 실제 결과 | 달성 여부 |
+|------|------|-----------|-----------|
+| **클록 주파수** | 200 MHz | 200 MHz | ✅ |
+| **타이밍 (WNS)** | > 0 | +216 ps | ✅ |
+| **게이트 수** | < 1000 | 595 | ✅ |
+| **면적** | < 5000 um² | 2958 um² | ✅ |
+| **전력** | < 150 mW | ~100 mW | ✅ |
+
+### 상세 메트릭
+
+#### 1. 타이밍 메트릭
+
+```
+Clock Period:              5.000 ns (200 MHz)
+Setup WNS:                 0.217 ns ✓
+Setup TNS:                 0.000 ns ✓
+Hold WNS:                  0.050 ns ✓
+Hold TNS:                  0.000 ns ✓
+Max Fanout:                42 (clk)
+Critical Path Stages:      ~15 gates
+```
+
+#### 2. 면적 메트릭
+
+```
+Total Die Area:            2958.316 um²
+Standard Cell Area:        1785.687 um²
+Utilization:               60.4%
+Number of Cells:           595
+  - Sequential:            42 (7.1%)
+  - Combinational:         553 (92.9%)
+Number of Nets:            ~700
+Average Fanout:            1.8
+```
+
+#### 3. 전력 메트릭 (@ 200MHz, 1.1V, 27°C)
+
+```
+Total Power:               ~100 mW
+  - Dynamic Power:         ~70 mW (70%)
+    * Switching:           ~50 mW
+    * Internal:            ~20 mW
+  - Leakage Power:         ~30 mW (30%)
+
+Power Breakdown by Module:
+  - ALU:                   ~25 mW (25%)
+  - Register File:         ~20 mW (20%)
+  - FSM:                   ~15 mW (15%)
+  - Others:                ~40 mW (40%)
+```
+
+#### 4. 물리적 특성
+
+```
+Die Dimensions:            ~54 x 54 um
+Aspect Ratio:              1.0
+Number of Metal Layers:    10
+Routing Congestion:        Low (<50%)
+Clock Tree:
+  - Clock Sinks:           42
+  - Clock Skew:            <100 ps
+  - Clock Latency:         ~500 ps
+```
+
+### 비교 분석
+
+#### 공정 기술 비교
+
+| 공정 | JSilicon (45nm) | 예상 (28nm) | 예상 (7nm) |
+|------|-----------------|-------------|------------|
+| 면적 | 2958 um² | ~1600 um² | ~400 um² |
+| 전력 | 100 mW | ~50 mW | ~15 mW |
+| 주파수 | 200 MHz | ~500 MHz | ~2 GHz |
+
+#### 최적화 여지
+
+| 항목 | 현재 | 최적화 후 예상 | 방법 |
+|------|------|---------------|------|
+| 면적 | 2958 um² | ~2500 um² | Clock gating, 논리 간소화 |
+| 전력 | 100 mW | ~70 mW | 동적 전압/주파수 조정 |
+| 주파수 | 200 MHz | ~250 MHz | Pipeline 추가 |
+
+---
+
+## 🔧 문제 해결
+
+### 자주 발생하는 오류
+
+#### 1. 합성 오류
+
+**오류:** `Could not find module 'tt_um_Jsilicon'`
+
+**원인:** RTL 파일 읽기 실패 또는 모듈명 불일치
+
+**해결:**
+```bash
+# RTL 파일 확인
+ls -lh src/*.v
+
+# 모듈명 확인
+grep "^module" src/jsilicon.v
+
+# 스크립트에서 올바른 이름 사용
+# elaborate tt_um_Jsilicon  (대소문자 정확히!)
+```
+
+#### 2. 타이밍 위반
+
+**오류:** `WNS: -0.5 ns (Timing violated)`
+
+**원인:** Critical path 지연이 클록 주기를 초과
+
+**해결 방법:**
+
+1. **클록 주기 증가** (가장 간단)
+```tcl
+# jsilicon.sdc 수정
+create_clock -name clk -period 6.0 [get_ports clk]  # 5.0 → 6.0
+```
+
+2. **합성 최적화 강화**
+```tcl
+# synthesis.tcl 수정
+set_db syn_generic_effort high
+set_db syn_map_effort high
+set_db syn_opt_effort high
+```
+
+3. **RTL 최적화**
+- 조합 논리 경로 단축
+- Pipeline stage 추가
+- 병렬 처리 구조로 변경
+
+#### 3. LEF/Liberty 파일 오류
+
+**오류:** `Cannot find library file 'gscl45nm.lib'`
+
+**원인:** 파일 경로 문제
+
+**해결:**
+```bash
+# 파일 존재 확인
+ls -lh ~/JSilicon2/tech/lib/gscl45nm.lib
+ls -lh ~/JSilicon2/tech/lef/gscl45nm.lef
+
+# 절대 경로 사용
+set tech_lib [file normalize ~/JSilicon2/tech/lib/gscl45nm.lib]
+```
+
+#### 4. Innovus OA 오류
+
+**오류:** `OpenAccess (OA) shared library installation is older`
+
+**원인:** OA_HOME 환경 변수 충돌
+
+**해결:**
+```bash
+# OA_HOME 제거
+unset OA_HOME
+
+# .bashrc에 추가
+echo "unset OA_HOME" >> ~/.bashrc
+source ~/.bashrc
+```
+
+#### 5. 라이선스 오류
+
+**오류:** `License checkout failed`
+
+**원인:** 라이선스 서버 연결 실패
+
+**해결:**
+```bash
+# 라이선스 서버 확인
+echo $CDS_LIC_FILE
+
+# Ping 테스트
+ping license.server.edu
+
+# 라이선스 상태 확인
+lmstat -a
+```
+
+### 디버깅 팁
+
+#### 로그 파일 확인
+
+```bash
+# Genus 로그
+tail -100 work/synthesis/genus.log
+
+# Innovus 로그
+tail -100 work/pnr/innovus.log
+
+# 오류 메시지 검색
+grep -i "error" work/synthesis/genus.log
+grep -i "warning" work/synthesis/genus.log
+```
+
+#### 단계별 체크포인트
+
+```bash
+# 합성 후 확인
+ls -lh results/netlist/tt_um_Jsilicon_synth.v
+cat reports/synthesis/qor.rpt | tail -30
+
+# P&R 후 확인
+ls -lh results/def/tt_um_Jsilicon.def
+cat reports/pnr/summary.rpt
+```
+
 
 
 ---
