@@ -4542,9 +4542,30 @@ puts "=========================================="
 puts "8. Pin Placement Check"
 puts "=========================================="
 
-checkPinPlacement -report $lvs_dir/pin_placement.rpt
+# Pin 개수 확인
+set all_terms [dbGet top.terms -e]
+if { $all_terms != "" } {
+    set pin_count [llength $all_terms]
+    puts "  Total I/O pins: $pin_count"
+    
+    # Unplaced pin 확인 (간단한 방법)
+    set unplaced_count 0
+    foreach term $all_terms {
+        set is_placed [dbGet ${term}.isPlaced -e]
+        if { $is_placed == "0" || $is_placed == "" } {
+            incr unplaced_count
+        }
+    }
+    
+    if { $unplaced_count > 0 } {
+        puts "  ⚠ Unplaced pins: $unplaced_count"
+    } else {
+        puts "  ✓ All pins placed"
+    }
+} else {
+    puts "  (No I/O pins found)"
+}
 
-puts "  ✓ Report: pin_placement.rpt"
 puts ""
 
 ###############################################################################
@@ -4555,38 +4576,56 @@ puts "=========================================="
 puts "9. Design Statistics"
 puts "=========================================="
 
-# Cell 타입별 카운트
+# Cell 타입별 카운트 (간단한 방법)
 puts "  Cell Type Distribution:"
 
-array set cell_types {}
-foreach inst [dbGet top.insts] {
-    set cell_name [dbGet $inst.cell.name]
-    if { ![info exists cell_types($cell_name)] } {
-        set cell_types($cell_name) 0
+# 모든 인스턴스 가져오기
+set all_insts [dbGet top.insts -e]
+
+if { $all_insts != "" } {
+    # Cell 타입별로 그룹화
+    array set cell_types {}
+    
+    foreach inst $all_insts {
+        set cell_name [dbGet ${inst}.cell.name -e]
+        if { $cell_name != "" && $cell_name != "0x0" } {
+            if { ![info exists cell_types($cell_name)] } {
+                set cell_types($cell_name) 0
+            }
+            incr cell_types($cell_name)
+        }
     }
-    incr cell_types($cell_name)
-}
-
-# 상위 10개 cell type 출력
-set sorted_cells [lsort -integer -decreasing -index 1 \
-    [array get cell_types]]
-
-set count 0
-foreach {cell num} $sorted_cells {
-    puts "    $cell: $num"
-    incr count
-    if { $count >= 10 } break
+    
+    # 카운트별로 정렬하여 상위 10개 출력
+    set sorted_list {}
+    foreach {cell count} [array get cell_types] {
+        lappend sorted_list [list $cell $count]
+    }
+    set sorted_list [lsort -integer -decreasing -index 1 $sorted_list]
+    
+    set display_count 0
+    foreach item $sorted_list {
+        set cell [lindex $item 0]
+        set count [lindex $item 1]
+        puts "    [format %-20s $cell]: $count"
+        incr display_count
+        if { $display_count >= 10 } break
+    }
+} else {
+    puts "    (No instances found)"
 }
 
 puts ""
 
 # Port 개수
-set port_count [llength [dbGet top.terms]]
+set port_count [llength [dbGet top.terms -e]]
 puts "  I/O Ports:         $port_count"
 
 # 면적
-set total_area [dbGet top.fPlan.area]
-puts "  Total Area:        [format %.2f $total_area] μm²"
+set total_area [dbGet top.fPlan.area -e]
+if { $total_area != "" && $total_area != "0x0" } {
+    puts "  Total Area:        [format %.2f $total_area] μm²"
+}
 
 puts ""
 
@@ -4621,12 +4660,19 @@ puts $fp "3. I/O PORTS"
 puts $fp "   Total ports:          $port_count"
 puts $fp ""
 puts $fp "4. AREA"
-puts $fp "   Total area:           [format %.2f $total_area] μm²"
+if { $total_area != "" && $total_area != "0x0" } {
+    puts $fp "   Total area:           [format %.2f $total_area] μm²"
+} else {
+    puts $fp "   Total area:           N/A"
+}
 puts $fp ""
 puts $fp "5. TOP CELL TYPES (by count)"
 
+# sorted_list 사용 (섹션 9에서 생성한 변수)
 set count 0
-foreach {cell num} $sorted_cells {
+foreach item $sorted_list {
+    set cell [lindex $item 0]
+    set num [lindex $item 1]
     puts $fp [format "   %-20s %5d" $cell $num]
     incr count
     if { $count >= 15 } break
@@ -4641,7 +4687,6 @@ puts $fp ""
 puts $fp "7. CONNECTIVITY CHECKS"
 puts $fp "   General connectivity: connectivity_check.rpt"
 puts $fp "   P/G connectivity:     pg_connectivity.rpt"
-puts $fp "   Pin placement:        pin_placement.rpt"
 puts $fp ""
 puts $fp "8. VERIFICATION STATUS"
 
@@ -4712,6 +4757,45 @@ puts ""
 puts "=========================================="
 
 exit
+```
+
+```
+
+==========================================
+10. Generating LVS Summary
+==========================================
+  ✓ Summary: /home/student001/JSilicon2/results/lvs/lvs_summary.rpt
+
+==========================================
+✓✓✓ LVS Check Complete ✓✓✓
+==========================================
+
+Generated Files:
+  /home/student001/JSilicon2/results/lvs/lvs_summary.rpt
+  /home/student001/JSilicon2/results/lvs/layout_extracted.sp
+  /home/student001/JSilicon2/results/lvs/layout_extracted.v
+  /home/student001/JSilicon2/results/lvs/connectivity_check.rpt
+  /home/student001/JSilicon2/results/lvs/pg_connectivity.rpt
+  /home/student001/JSilicon2/results/lvs/pin_placement.rpt
+
+Review Summary:
+  cat /home/student001/JSilicon2/results/lvs/lvs_summary.rpt
+
+Check Connectivity:
+  cat /home/student001/JSilicon2/results/lvs/connectivity_check.rpt
+
+For GDS export (Calibre LVS):
+  streamOut /home/student001/JSilicon2/results/lvs/tt_um_Jsilicon.gds \
+    -mapFile ../../tech/lef/gds.map
+
+==========================================
+
+*** Memory Usage v#2 (Current mem = 2266.172M, initial mem = 839.172M) ***
+*** Message Summary: 214 warning(s), 4 error(s)
+
+--- Ending "Innovus" (totcpu=0:00:28.4, real=0:00:30.0, mem=2266.2M) ---
+
+[student001@gjchamber pnr]$
 
 ```
 
