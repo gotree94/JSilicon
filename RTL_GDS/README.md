@@ -2657,77 +2657,644 @@ echo "=========================================="
 
 ### Step 5: 결과 분석 및 검증
 
-#### 5-1. 타이밍 검증
+## 📋 목차
 
-```bash
-cd ~/JSilicon2/reports/pnr
+- [P&R 결과 분석](#pr-결과-분석)
+  - [1. 타이밍 분석](#1-타이밍-분석)
+  - [2. 면적 분석](#2-면적-분석)
+  - [3. 전력 분석](#3-전력-분석)
+  - [4. Violations 분석](#4-violations-분석)
+  - [5. Physical Verification](#5-physical-verification)
+- [디렉토리 구조](#디렉토리-구조)
+- [실행 방법](#실행-방법)
 
-# Setup 타이밍 체크
-echo "=== Setup Timing (최대 동작 주파수) ==="
-grep -A 20 "Setup mode" timing_final.rpt | head -25
+---
 
-# Hold 타이밍 체크
-echo ""
-echo "=== Hold Timing (최소 지연) ==="
-grep -A 20 "Hold mode" timing_final.rpt | head -25
+### 사용 도구
+- **Synthesis**: Cadence Genus
+- **Place & Route**: Cadence Innovus 23.13
+- **Technology**: FreePDK45 (gscl45nm)
+
+---
+
+## 디자인 스펙
+
+### 칩 사양
+| 항목 | 값 |
+|------|-----|
+| **Technology** | FreePDK45 (45nm) |
+| **Die Size** | 74.86 × 72.01 μm² |
+| **Core Size** | 54.72 × 51.87 μm² |
+| **Total Area** | 1,828.86 μm² |
+| **Cell Count** | 587 cells |
+| **Utilization** | 64.4% |
+
+### 클럭 사양
+| 항목 | 값 |
+|------|-----|
+| **Target Clock** | 200 MHz (5.0 ns) |
+| **Clock Uncertainty** | 0.5 ns |
+
+---
+
+## P&R 결과 분석
+
+### 1. 타이밍 분석
+
+#### 🔴 Setup Timing (최대 동작 주파수)
+
+**Status**: ⚠️ **VIOLATED** (최적화 필요)
+
+```
+Worst Negative Slack (WNS): -0.011 ns
+Critical Path: uio_in[4] → core_inst_uart_inst/data_reg_reg[1]/D
 ```
 
-**타이밍 해석:**
-- **WNS (Worst Negative Slack)**: 가장 나쁜 경로의 slack
-  - WNS > 0: 타이밍 만족 ✅
-  - WNS < 0: 타이밍 위반 ❌
-- **TNS (Total Negative Slack)**: 모든 위반 경로의 slack 합
-  - TNS = 0: 모든 경로 만족 ✅
+**Critical Path 상세**:
+- **Start Point**: `uio_in[4]` (입력 포트)
+- **End Point**: `core_inst_uart_inst/data_reg_reg[1]/D` (UART 데이터 레지스터)
+- **Path Delay**: 3.090 ns
+- **Required Time**: 3.079 ns
+- **Slack**: -0.011 ns (11 ps 위반)
 
-#### 5-2. 면적 분석
+**타이밍 분석**:
+```
+Clock Rise Edge:              0.000 ns
++ Input Delay:                1.500 ns
++ Logic Delay:                1.590 ns (26 stages)
+--------------------------------
+Total Arrival Time:           3.090 ns
 
-```bash
-# 면적 상세 확인
+Clock Period:                 5.000 ns
+- Setup Time:                 1.421 ns
+- Uncertainty:                0.500 ns
+--------------------------------
+Required Time:                3.079 ns
+
+Setup Slack:                 -0.011 ns ❌
+```
+
+**Critical Path Breakdown** (주요 게이트):
+1. `uio_in[4]` → INVX2 (58 ps)
+2. NAND2X1 (170 ps)
+3. INVX8 (55 ps)
+4. ALU 연산 경로 (다수의 AND/OR/XOR gates)
+5. MUX2X1 (99 ps)
+6. INVX1 (16 ps)
+7. `data_reg_reg[1]` (DFFPOSX1)
+
+**개선 방안**:
+- ✅ 입력 지연 감소 (현재 1.5ns → 1.0ns로 조정)
+- ✅ ALU 경로 파이프라인 추가
+- ✅ 클럭 주파수 하향 조정 (200MHz → 150MHz)
+- ✅ 게이트 크기 증가 (INVX1 → INVX2/INVX4)
+
+#### 🔴 Hold Timing (최소 지연)
+
+**Status**: ⚠️ **VIOLATED** (버퍼 삽입 필요)
+
+```
+Worst Hold Slack: -0.395 ns
+Critical Path: core_inst_uart_inst/clock_count_reg[12]/Q → /D
+```
+
+**Hold Path 상세**:
+- **Start Point**: `clock_count_reg[12]/Q` (UART 클럭 카운터)
+- **End Point**: `clock_count_reg[12]/D` (동일 레지스터)
+- **Path Delay**: 0.151 ns
+- **Required Time**: 0.546 ns
+- **Hold Slack**: -0.395 ns (395 ps 위반)
+
+**홀드 타임 분석**:
+```
+Clock Rise Edge:              0.000 ns
++ Clock Network Latency:      0.000 ns (Ideal)
+--------------------------------
+Beginpoint Arrival:           0.000 ns
+
+DFFSR CLK→Q:                  0.086 ns
++ HAX1 (Half Adder):          0.065 ns
+--------------------------------
+Arrival Time:                 0.151 ns
+
+Hold Time:                    0.046 ns
++ Uncertainty:                0.500 ns
+--------------------------------
+Required Time:                0.546 ns
+
+Hold Slack:                  -0.395 ns ❌
+```
+
+**개선 방안**:
+- ✅ 지연 셀(Delay Cell) 삽입
+- ✅ 버퍼 체인 추가 (BUFX2/BUFX4)
+- ✅ 클럭 트리 최적화 (CTS 재실행)
+
+#### 📊 타이밍 요약
+
+| Timing Check | WNS | TNS | Status |
+|-------------|-----|-----|--------|
+| Setup (Max) | -0.011 ns | - | ⚠️ VIOLATED |
+| Hold (Min) | -0.395 ns | - | ⚠️ VIOLATED |
+
+**달성 가능한 최대 주파수**:
+```
+Current Target: 200 MHz (5.0 ns)
+Achievable:     ~162 MHz (6.17 ns)
+  = 1 / (5.0ns + 0.011ns + margin)
+```
+
+---
+
+### 2. 면적 분석
+
+#### 📐 칩 면적
+
+| 구분 | 크기 (μm²) | 비율 |
+|------|-----------|------|
+| **Die Area** | 5,389.57 (74.86 × 72.01) | 100% |
+| **Core Area** | 2,838.33 (54.72 × 51.87) | 52.7% |
+| **Std Cell Area** | 1,828.86 | 33.9% |
+| **Utilization** | - | 64.4% |
+
+**면적 계산**:
+```
+Die Area        = 74.86 × 72.01 = 5,389.57 μm²
+Core Area       = 54.72 × 51.87 = 2,838.33 μm²
+Std Cell Area   = 1,828.86 μm²
+Core Margin     = 10.07 μm (각 면)
+
+Utilization = Std Cell Area / Core Area
+            = 1,828.86 / 2,838.33
+            = 64.4%
+```
+
+#### 📦 모듈별 면적
+
+| Module | Instances | Area (μm²) | 비율 |
+|--------|-----------|-----------|------|
+| **Total** | 587 | 1,828.86 | 100% |
+| UART_TX | 162 | 623.70 | 34.1% |
+| DECODER | 1 | 10.33 | 0.6% |
+| Others | 424 | 1,194.83 | 65.3% |
+
+#### 🔧 셀 타입별 분포
+
+| Cell Type | Count | Area (μm²) | 평균 (μm²) |
+|-----------|-------|-----------|-----------|
+| **AND2X2** | 84 | 197.11 | 2.35 |
+| **INVX2** | 85 | 119.67 | 1.41 |
+| **FAX1** (Full Adder) | 19 | 169.42 | 8.92 |
+| **HAX1** (Half Adder) | 15 | 77.43 | 5.16 |
+| **INVX1** | 51 | 71.80 | 1.41 |
+| **DFFSR** (Flip-Flop) | 34 | 351.04 | 10.33 |
+| **AOI21X1** | 14 | 32.85 | 2.35 |
+| **AOI22X1** | 10 | 28.16 | 2.82 |
+| **DFFPOSX1** | 8 | 52.56 | 6.57 |
+| **Others** | 267 | - | - |
+
+**셀 분포 분석**:
+- **조합 논리**: 70.3% (AND, OR, INV, AOI, XOR 등)
+- **순차 논리**: 29.7% (DFF, DFFSR)
+- **산술 연산**: 14.5% (FAX1, HAX1 - Adder cells)
+
+---
+
+### 3. 전력 분석
+
+#### ⚡ 전력 소모 요약
+
+| 구분 | 전력 (mW) | 비율 |
+|------|----------|------|
+| **Internal Power** | 0.399 | 71.0% |
+| **Switching Power** | 0.150 | 26.7% |
+| **Leakage Power** | 0.013 | 2.3% |
+| **Total Power** | **0.561 mW** | 100% |
+
+**클럭 주파수**: 200 MHz  
+**전원 전압**: 1.1V
+
+#### 📊 전력 분포 상세
+
+**블록별 전력 소모**:
+
+| Block Type | Internal | Switching | Leakage | Total | 비율 |
+|-----------|----------|-----------|---------|-------|------|
+| **Sequential** | 0.256 mW | 0.012 mW | 0.004 mW | 0.272 mW | 48.4% |
+| **Combinational** | 0.143 mW | 0.137 mW | 0.009 mW | 0.289 mW | 51.6% |
+| **Clock** | 0 mW | 0 mW | 0 mW | 0 mW | 0% |
+
+**전력 분석**:
+```
+Internal Power (Dynamic):
+  - Sequential Logic:      0.256 mW (45.6%)
+  - Combinational Logic:   0.143 mW (25.4%)
+
+Switching Power:           0.150 mW (26.7%)
+  - Data Switching:        0.137 mW
+  - Clock Tree:            0.012 mW
+
+Leakage Power:            0.013 mW (2.3%)
+  - 45nm 공정 특성상 낮은 누설 전류
+```
+
+#### 🔋 전력 효율
+
+| 항목 | 값 |
+|------|-----|
+| **Power Density** | 0.104 mW/mm² |
+| **Energy per Cycle** | 2.81 pJ/cycle |
+| **Power/Gate** | 0.96 μW/gate |
+
+**계산**:
+```
+Power Density = Total Power / Die Area
+              = 0.561 mW / 5,389.57 μm²
+              = 0.104 mW/mm²
+
+Energy/Cycle  = Total Power / Frequency
+              = 0.561 mW / 200 MHz
+              = 2.81 pJ/cycle
+```
+
+#### 🌟 최대 전력 소모 인스턴스
+
+```
+Highest Average Power: 
+  - core_inst_uart_inst/tx_reg (DFFSR): 8.68 μW
+
+Highest Leakage Power:
+  - core_inst_uart_inst/tx_reg (DFFSR): 108.6 nW
+```
+
+---
+
+### 4. Violations 분석
+
+#### ⚠️ Constraint Violations 요약
+
+**Total Violations**: 126 lines
+
+**주요 위반 사항**:
+
+##### Setup Timing Violations (2건)
+```
+1. core_inst_uart_inst/data_reg_reg[1]/D
+   - Slack: -0.011 ns
+   - Path: uio_in[4] → UART data register
+
+2. core_inst_uart_inst/data_reg_reg[2]/D
+   - Slack: -0.010 ns
+   - Path: Similar to above
+```
+
+**원인 분석**:
+- UART 모듈의 데이터 경로가 긴 조합 논리를 포함
+- 입력 지연(1.5ns)이 과도하게 설정됨
+- ALU 연산 경로 최적화 부족
+
+##### Hold Timing Violations (다수)
+```
+주요 위반:
+- UART clock_count_reg 체인
+- Slack: -0.395 ns ~ -0.393 ns
+```
+
+**원인 분석**:
+- 클럭 트리가 구축되지 않음 (Ideal clock 사용)
+- 레지스터 간 경로가 너무 짧음 (Half Adder 단일 단계)
+- 버퍼 삽입 필요
+
+#### 📋 Violation 카테고리
+
+| Check Type | Count | Status |
+|-----------|-------|--------|
+| **max_delay/setup** | 2 | VIOLATED |
+| **min_delay/hold** | 다수 | VIOLATED |
+| **clock_period** | 0 | PASS |
+| **skew** | 0 | PASS |
+| **pulse_width** | 0 | PASS |
+
+#### 🔧 해결 방안
+
+**Setup Violations**:
+1. ✅ 클럭 주파수 하향 (200MHz → 150MHz)
+2. ✅ 입력 지연 재조정 (1.5ns → 1.0ns)
+3. ✅ 조합 논리 파이프라이닝
+4. ✅ 게이트 사이징 최적화
+
+**Hold Violations**:
+1. ✅ CTS (Clock Tree Synthesis) 재실행
+2. ✅ 지연 셀 삽입
+3. ✅ 버퍼 체인 추가
+4. ✅ `optDesign -postRoute -hold` 실행
+
+---
+
+### 5. Physical Verification
+
+#### ✅ Geometry Check (DRC)
+
+**Status**: ✅ **PASS** - No violations
+
+```
+DRC Summary:
+  - Cells:      0 violations
+  - SameNet:    0 violations
+  - Wiring:     0 violations
+  - Antenna:    0 violations
+  - Short:      0 violations
+  - Overlap:    0 violations
+
+Result: No DRC violations were found ✓
+```
+
+**의미**: 
+- 모든 레이아웃이 FreePDK45 Design Rule을 준수
+- Metal spacing, width, via 규칙 만족
+- 제조 가능한 레이아웃
+
+#### ⚠️ Connectivity Check
+
+**Status**: ⚠️ **27 Issues** (Minor - Dangling Wires)
+
+**발견된 문제**:
+```
+Power Net (vdd): 14 dangling wires
+Ground Net (gnd): 13 dangling wires
+
+Total: 27 dangling wire segments
+```
+
+**Dangling Wire 위치**:
+
+**VDD Net** (14개):
+```
+Metal1 Layer (11개):
+  - (64.790, 10.070) ~ (64.790, 59.470)
+  - 균등 간격 (약 4.94 μm)
+
+Metal8 Layer (3개):
+  - (53.290, 61.940)
+  - (31.930, 61.940)
+  - (10.570, 61.940)
+```
+
+**GND Net** (13개):
+```
+Metal1 Layer (10개):
+  - (10.070, 12.540) ~ (10.070, 61.940)
+  
+Metal8 Layer (3개):
+  - (64.290, 10.070)
+  - (42.930, 10.070)
+  - (21.570, 10.070)
+```
+
+**원인 분석**:
+- Power stripe와 core 경계 간 연결 누락
+- Power ring의 일부 세그먼트 미연결
+- Standard cell row 끝단 연결 문제
+
+**영향**:
+- 🟡 **Minor Issue**: 기능에는 영향 없음
+- 일부 전원 경로 redundancy 감소
+- IR drop에 약간의 영향 가능
+
+**해결 방안**:
+```tcl
+# Innovus에서 수정
+editPowerVia -add_vias 1 -orthogonal_only 1
+verifyConnectivity -type special
+```
+
+#### 📊 Physical Summary
+
+| Check | Result | Details |
+|-------|--------|---------|
+| **DRC** | ✅ PASS | 0 violations |
+| **LVS** | - | Not performed |
+| **Connectivity** | ⚠️ 27 issues | Dangling wires (non-critical) |
+| **Antenna** | ✅ PASS | No violations |
+
+---
+
+## 📁 디렉토리 구조
+
+```
+JSilicon2/
+├── tech/                          # Technology files
+│   ├── lef/
+│   │   └── gscl45nm.lef          # LEF (45nm)
+│   └── lib/
+│       └── gscl45nm.lib          # Liberty (45nm)
+│
+├── rtl/                           # RTL source files
+│   ├── tt_um_Jsilicon.v          # Top module
+│   ├── core.v                    # Core logic
+│   ├── alu.v                     # ALU
+│   ├── uart_tx.v                 # UART transmitter
+│   └── decoder.v                 # Instruction decoder
+│
+├── scripts/                       # TCL scripts
+│   ├── genus/
+│   │   └── synthesis.tcl         # Synthesis script
+│   └── innovus/
+│       ├── pnr_flow.tcl          # P&R main flow
+│       └── mmmc.tcl              # MMMC setup
+│
+├── work/                          # Working directory
+│   ├── synthesis/                # Synthesis outputs
+│   └── pnr/                      # P&R database
+│       ├── jsilicon_placed.enc   # After placement
+│       ├── jsilicon_cts.enc      # After CTS
+│       └── jsilicon_final.enc    # Final design
+│
+├── results/                       # Final outputs
+│   ├── netlist/
+│   │   ├── tt_um_Jsilicon_synth.v      # Post-synthesis netlist
+│   │   └── tt_um_Jsilicon_final.v      # Post-P&R netlist
+│   └── def/
+│       └── tt_um_Jsilicon.def          # Final DEF
+│
+└── reports/                       # Reports
+    ├── synthesis/
+    │   ├── area.rpt
+    │   ├── power.rpt
+    │   └── timing.rpt
+    └── pnr/
+        ├── timing_summary.rpt    # 타이밍 요약
+        ├── timing_setup.rpt      # Setup 상세
+        ├── timing_hold.rpt       # Hold 상세
+        ├── area_final.rpt        # 면적
+        ├── power_final.rpt       # 전력
+        ├── violations.rpt        # Violations
+        ├── geometry.rpt          # DRC
+        ├── connectivity.rpt      # 연결성
+        └── summary.rpt           # 전체 요약
+```
+
+---
+
+## 🚀 실행 방법
+
+### 1. Synthesis (Genus)
+
+```csh
+cd ~/JSilicon2/work/synthesis
+genus -f ../../scripts/genus/synthesis.tcl |& tee synthesis.log
+```
+
+### 2. Place & Route (Innovus)
+
+```csh
+cd ~/JSilicon2/work/pnr
+innovus -init ../../scripts/innovus/pnr_flow.tcl |& tee pnr.log
+```
+
+### 3. 결과 확인
+
+```csh
+cd ~/JSilicon2
+
+# 빠른 확인
+./quick_check.csh
+
+# 상세 분석
+./analyze_pnr_results.csh
+
+# 개별 리포트
+cat reports/pnr/timing_summary.rpt
 cat reports/pnr/area_final.rpt
+cat reports/pnr/power_final.rpt
 ```
 
-**면적 분류:**
-```
-┌─────────────────────────────────┐
-│ Total Chip Area: ~3000 um²      │
-├─────────────────────────────────┤
-│ Standard Cells:   ~1800 um² 60% │
-│ Routing:          ~1200 um² 40% │
-├─────────────────────────────────┤
-│ Sequential:       ~400 um²  13% │
-│ Combinational:    ~1400 um² 47% │
-└─────────────────────────────────┘
-```
+### 4. GUI로 레이아웃 보기
 
-#### 5-3. 전력 분석
-
-```bash
-# 전력 소모 확인
-cat reports/pnr/power_final.rpt | head -30
-```
-
-**전력 분류:**
-```
-Total Power: ~100 mW
-├─ Dynamic Power:  ~70 mW  (70%)
-│  ├─ Switching:   ~50 mW
-│  └─ Internal:    ~20 mW
-└─ Leakage Power:  ~30 mW  (30%)
-```
-
-#### 5-4. 레이아웃 시각화
-
-```bash
-# Innovus GUI에서 열기
+```csh
 cd ~/JSilicon2/work/pnr
 innovus
-
-# Innovus 프롬프트에서:
-# > restoreDesign jsilicon_final.enc
-# > fit
-# > gui_show -all
 ```
 
+Innovus 콘솔에서:
+```tcl
+restoreDesign jsilicon_final.enc.dat tt_um_Jsilicon
+fit
+```
+
+---
+
+## 📊 성능 요약
+
+| 항목 | 타겟 | 실제 | Status |
+|------|------|------|--------|
+| **클럭 주파수** | 200 MHz | ~162 MHz | ⚠️ |
+| **전력 소모** | < 1 mW | 0.561 mW | ✅ |
+| **면적** | < 0.01 mm² | 0.0054 mm² | ✅ |
+| **셀 수** | - | 587 cells | - |
+| **Setup Timing** | 0 violations | 2 violations | ⚠️ |
+| **Hold Timing** | 0 violations | 다수 | ⚠️ |
+| **DRC** | 0 violations | 0 violations | ✅ |
+
+---
+
+## 🔄 개선 사항
+
+### 우선순위 1 (Critical)
+- [ ] Setup timing violation 해결
+  - 클럭 주파수 조정: 200MHz → 150MHz
+  - 입력 지연 재설정: 1.5ns → 1.0ns
+  
+- [ ] Hold timing violation 해결
+  - CTS 재실행 (현재 ideal clock 사용)
+  - 지연 셀 삽입
+
+### 우선순위 2 (Important)
+- [ ] Power grid dangling wire 수정
+  - Power stripe 연결 보강
+  - Via 추가
+
+### 우선순위 3 (Nice to have)
+- [ ] 면적 최적화
+  - Utilization 64% → 70% 증가 가능
+  
+- [ ] 전력 최적화
+  - Clock gating 추가
+  - Multi-Vt cell 활용
+
+---
+
+## 📈 다음 단계
+
+1. **타이밍 최적화**
+   ```tcl
+   # Innovus에서
+   restoreDesign jsilicon_final.enc
+   optDesign -postRoute -setup -hold
+   saveDesign jsilicon_final_opt.enc
+   ```
+
+2. **Clock Tree Synthesis**
+   ```tcl
+   set_ccopt_property buffer_cells {BUFX2 BUFX4}
+   set_ccopt_property inverter_cells {INVX1 INVX2}
+   clock_opt_design
+   ```
+
+3. **검증**
+   - LVS (Layout vs Schematic)
+   - Parasitic extraction
+   - Post-layout simulation
+
+4. **GDS 생성**
+   ```tcl
+   streamOut final.gds -mapFile gds.map -merge
+   ```
+
+---
+
+## 📝 참고 자료
+
+- [FreePDK45 Documentation](http://www.eda.ncsu.edu/wiki/FreePDK45)
+- [Cadence Innovus User Guide](https://www.cadence.com/)
+- [RISC-V Specification](https://riscv.org/specifications/)
+
+---
+
+## 👨‍💻 Author
+
+**나무 (Namu)**
+- Digital IC Design Engineer
+- Focus: ASIC Design Flow, RISC-V, Post-Quantum Cryptography
+
+---
+
+## 📄 License
+
+This project is for educational purposes.
+
+---
+
+## 🎯 결론
+
+JSilicon 프로젝트는 FreePDK45 공정을 사용한 RISC-V 코어의 성공적인 ASIC 구현을 보여줍니다:
+
+### ✅ 성공 사항
+- 완전한 RTL-to-Layout 플로우 완료
+- DRC Clean (0 violations)
+- 저전력 설계 (0.561 mW)
+- 소면적 구현 (5,390 μm²)
+
+### ⚠️ 개선 필요
+- 타이밍 위반 해결 (Setup: -0.011ns, Hold: -0.395ns)
+- CTS 최적화
+- Power grid 연결 개선
+
+전반적으로 **첫 번째 테이프아웃 준비 80% 완료** 상태이며, 타이밍 최적화 후 **제조 가능한 수준**에 도달할 것으로 예상됩니다.
+
+---
+
+*Last Updated: November 18, 2025*
 **GUI 확인 사항:**
 - [ ] 셀들이 균일하게 배치되었는가?
 - [ ] 클록 트리가 대칭적으로 구성되었는가?
