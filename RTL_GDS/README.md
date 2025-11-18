@@ -4795,12 +4795,73 @@ For GDS export (Calibre LVS):
 
 --- Ending "Innovus" (totcpu=0:00:28.4, real=0:00:30.0, mem=2266.2M) ---
 
-[student001@gjchamber pnr]$
+```
+
+```
+
+[student001@gjchamber pnr]$ cat ../../results/lvs/lvs_summary.rpt
+==============================================================================
+LVS (Layout vs Schematic) Summary Report
+==============================================================================
+Design:       tt_um_Jsilicon
+Date:         Tue Nov 18 12:14:54 KST 2025
+Database:     pnr
+==============================================================================
+
+1. INSTANCE COUNT
+   Layout instances:     587 cells
+
+2. NET COUNT
+   Total nets:           704
+   Signal nets:          702
+   Power/Ground nets:    2
+
+3. I/O PORTS
+   Total ports:          43
+
+4. AREA
+   Total area:           5390.67 μm²
+
+5. TOP CELL TYPES (by count)
+   OR2X2                  106
+   INVX2                   85
+   AND2X2                  84
+   INVX1                   51
+   OAI21X1                 43
+   MUX2X1                  43
+   DFFSR                   34
+   NOR3X1                  23
+   FAX1                    19
+   NAND2X1                 17
+   HAX1                    15
+   XNOR2X1                 14
+   AOI21X1                 14
+   XOR2X1                  13
+   AOI22X1                 10
+
+6. NETLISTS
+   Layout (extracted):   /home/student001/JSilicon2/results/lvs/layout_extracted.sp
+   Layout (Verilog):     /home/student001/JSilicon2/results/lvs/layout_extracted.v
+   Source (reference):   /home/student001/JSilicon2/results/netlist/tt_um_Jsilicon_final.v
+
+7. CONNECTIVITY CHECKS
+   General connectivity: connectivity_check.rpt
+   P/G connectivity:     pg_connectivity.rpt
+
+8. VERIFICATION STATUS
+   ⚠ Issues found - Review connectivity reports
+
+9. NEXT STEPS
+   - Review detailed connectivity reports
+   - Fix any dangling wires or shorts
+   - Re-run LVS after fixes
 
 ```
 
 ### Step 3: DRC 확인
 ```tcl
+innovus
+
 restoreDesign jsilicon_final_opt.enc.dat tt_um_Jsilicon
 
 file mkdir ../../reports/drc
@@ -4809,8 +4870,44 @@ verifyGeometry -report ../../reports/drc/geometry_final.rpt
 exit
 ```
 
+```
+
+innovus 3> verifyGeometry -report ../../reports/drc/geometry_final.rpt
+ *** Starting Verify Geometry (MEM: 2984.0) ***
+
+**WARN: (IMPVFG-257):   setVerifyGeometryMode/verifyGeometry command is obsolete and should not be used any more. It still works in this release but will be removed in future release. You should change to use set_verify_drc_mode/verify_drc which is the replacement tool for verifyGeometry.
+  VERIFY GEOMETRY ...... Starting Verification
+  VERIFY GEOMETRY ...... Initializing
+  VERIFY GEOMETRY ...... Deleting Existing Violations
+  VERIFY GEOMETRY ...... Creating Sub-Areas
+                  ...... bin size: 2080
+  VERIFY GEOMETRY ...... SubArea : 1 of 1
+  VERIFY GEOMETRY ...... Cells          :  0 Viols.
+  VERIFY GEOMETRY ...... SameNet        :  0 Viols.
+  VERIFY GEOMETRY ...... Wiring         :  0 Viols.
+  VERIFY GEOMETRY ...... Antenna        :  0 Viols.
+VG: elapsed time: 0.00
+Begin Summary ...
+  Cells       : 0
+  SameNet     : 0
+  Wiring      : 0
+  Antenna     : 0
+  Short       : 0
+  Overlap     : 0
+End Summary
+
+  Verification Complete : 0 Viols.  0 Wrngs.
+
+**********End: VERIFY GEOMETRY**********
+ *** verify geometry (CPU: 0:00:00.2  MEM: 362.6M)
+
+1
+```
+
 ### Step 4: RC Extraction
 ```tcl
+innovus
+
 restoreDesign jsilicon_final_opt.enc.dat tt_um_Jsilicon
 
 file mkdir ../../results/extraction
@@ -4824,8 +4921,193 @@ saveDesign jsilicon_extracted.enc
 exit
 ```
 
+```
+innovus 4> file mkdir ../../results/extraction
+innovus 5> extractRC
+Extraction called for design 'tt_um_Jsilicon' of instances=587 and nets=704 using extraction engine 'postRoute' at effort level 'low' .
+**WARN: (IMPEXT-3530):  The process node is not set. Use the command setDesignMode -process <process node> prior to extraction for maximum accuracy and optimal automatic threshold setting.
+Type 'man IMPEXT-3530' for more detail.
+PostRoute (effortLevel low) RC Extraction called for design tt_um_Jsilicon.
+RC Extraction called in multi-corner(1) mode.
+**WARN: (IMPEXT-6197):  The Cap table file is not specified. This will result in lower parasitic accuracy when using preRoute extraction or postRoute extraction with effort level 'low'. It is recommended to generate the Cap table file using the 'generateCapTbl' command and specify it before extraction using 'create_rc_corner/update_rc_corner -cap_table'.
+Type 'man IMPEXT-6197' for more detail.
+**WARN: (IMPEXT-3032):  Because the cap table file was not provided, it will be created internally with the following process info:
+* Layer Id             : 1 - M1
+      Thickness        : 0.6
+      Min Width        : 0.065
+      Layer Dielectric : 4.1
+* Layer Id             : 2 - M2
+      Thickness        : 0.6
+      Min Width        : 0.07
+      Layer Dielectric : 4.1
+* Layer Id             : 3 - M3
+      Thickness        : 0.6
+      Min Width        : 0.07
+      Layer Dielectric : 4.1
+* Layer Id             : 4 - M4
+      Thickness        : 0.6
+      Min Width        : 0.14
+      Layer Dielectric : 4.1
+* Layer Id             : 5 - M5
+      Thickness        : 0.6
+      Min Width        : 0.14
+      Layer Dielectric : 4.1
+* Layer Id             : 6 - M6
+      Thickness        : 0.6
+      Min Width        : 0.14
+      Layer Dielectric : 4.1
+* Layer Id             : 7 - M7
+      Thickness        : 0.6
+      Min Width        : 0.4
+      Layer Dielectric : 4.1
+* Layer Id             : 8 - M8
+      Thickness        : 0.6
+      Min Width        : 0.4
+      Layer Dielectric : 4.1
+* Layer Id             : 9 - M9
+      Thickness        : 0.6
+      Min Width        : 0.8
+      Layer Dielectric : 4.1
+* Layer Id             : 10 - M10
+      Thickness        : 1
+      Min Width        : 0.8
+      Layer Dielectric : 4.1
+extractDetailRC Option : -outfile /home/student001/JSilicon2/work/pnr/innovus_temp_91111_465e4ac5-b2c6-4aaa-bb81-8d6131065257_gjchamber_student001_KfoLAy/tt_um_Jsilicon_91111_465e4ac5-b2c6-4aaa-bb81-8d6131065257_Mnde6h.rcdb.d  -basic
+RC Mode: PostRoute -effortLevel low [Basic CapTable, LEF Resistances]
+      RC Corner Indexes            0
+Capacitance Scaling Factor   : 1.00000
+Coupling Cap. Scaling Factor : 1.00000
+Resistance Scaling Factor    : 1.00000
+Clock Cap. Scaling Factor    : 1.00000
+Clock Res. Scaling Factor    : 1.00000
+Shrink Factor                : 1.00000
+Initializing multi-corner resistance tables ...
+Checking LVS Completed (CPU Time= 0:00:00.0  MEM= 3354.6M)
+Extracted 10.0289% (CPU Time= 0:00:00.0  MEM= 3402.7M)
+**WARN: (IMPEXT-2882):  Unable to find the resistance for via 'M2_M1_via' in Cap table or LEF or OA files. The default value of 4.0 ohms is being assigned. To avoid this, check the Cap table and LEF and OA files, provide the resistance and read the files again.
+Extracted 20.0217% (CPU Time= 0:00:00.0  MEM= 3402.7M)
+Extracted 30.0325% (CPU Time= 0:00:00.0  MEM= 3402.7M)
+Extracted 40.0253% (CPU Time= 0:00:00.1  MEM= 3402.7M)
+Extracted 50.0361% (CPU Time= 0:00:00.1  MEM= 3402.7M)
+Extracted 60.0289% (CPU Time= 0:00:00.1  MEM= 3402.7M)
+Extracted 70.0217% (CPU Time= 0:00:00.1  MEM= 3402.7M)
+**WARN: (IMPEXT-2882):  Unable to find the resistance for via 'M3_M2_via' in Cap table or LEF or OA files. The default value of 4.0 ohms is being assigned. To avoid this, check the Cap table and LEF and OA files, provide the resistance and read the files again.
+Extracted 80.0325% (CPU Time= 0:00:00.1  MEM= 3402.7M)
+Extracted 90.0253% (CPU Time= 0:00:00.1  MEM= 3402.7M)
+**WARN: (IMPEXT-2882):  Unable to find the resistance for via 'M4_M3_via' in Cap table or LEF or OA files. The default value of 4.0 ohms is being assigned. To avoid this, check the Cap table and LEF and OA files, provide the resistance and read the files again.
+Extracted 100% (CPU Time= 0:00:00.1  MEM= 3402.7M)
+Number of Extracted Resistors     : 8754
+Number of Extracted Ground Cap.   : 9306
+Number of Extracted Coupling Cap. : 14588
+Filtering XCap in 'relativeOnly' mode using values relative_c_threshold=0.03 and total_c_threshold=5fF.
+Checking LVS Completed (CPU Time= 0:00:00.0  MEM= 3378.7M)
+PostRoute (effortLevel low) RC Extraction DONE (CPU Time: 0:00:00.2  Real Time: 0:00:01.0  MEM: 3378.656M)
+false
+innovus 6> rcOut -spef ../../results/extraction/tt_um_Jsilicon.spef
+RC Out has the following PVT Info:
+   RC-typical
+Dumping Spef file.....
+Printing D_NET...
+rcOut completed:: 9 % rcOut completed:: 19 % rcOut completed:: 29 % rcOut completed:: 39 % rcOut completed:: 49 % rcOut completed:: 59 % rcOut completed:: 69 % rcOut completed:: 79 % rcOut completed:: 89 % rcOut completed:: 100 %
+RC Out from RCDB Completed (CPU Time= 0:00:00.1  MEM= 3378.7M)
+innovus 7> write_sdf -version 3.0 ../../results/extraction/tt_um_Jsilicon.sdf
+**WARN: (SDF-808):      The software is currently operating in a high performance mode which optimizes the handling of multiple timing arcs between input and output pin pairs. With the current settings, the SDF file generated will contain the same delay information for all of these arcs. To have the SDF recalculated with explicit pin pair data, you should use the option '-recompute_delay_calc'. This setting is recommended for generating SDF for functional  simulation applications.
+AAE_INFO: opIsDesignInPostRouteState() is 1
+AAE_INFO: resetNetProps viewIdx 0
+Starting SI iteration 1 using Infinite Timing Windows
+#################################################################################
+# Design Stage: PostRoute
+# Design Name: tt_um_Jsilicon
+# Design Mode: 90nm
+# Analysis Mode: MMMC Non-OCV
+# Parasitics Mode: SPEF/RCDB
+# Signoff Settings: SI On
+#################################################################################
+AAE_INFO: 1 threads acquired from CTE.
+Start delay calculation (fullDC) (1 T). (MEM=2353.84)
+Initializing multi-corner resistance tables ...
+siFlow : Timing analysis mode is single, using late cdB files
+siFlow : Timing analysis mode is single, using late cdB files
+Total number of fetched objects 636
+AAE_INFO: Total number of nets for which stage creation was skipped for all views 0
+AAE_INFO-618: Total number of nets in the design is 704,  93.8 percent of the nets selected for SI analysis
+End delay calculation. (MEM=2393.92 CPU=0:00:00.2 REAL=0:00:00.0)
+End delay calculation (fullDC). (MEM=2393.16 CPU=0:00:00.4 REAL=0:00:00.0)
+Save waveform /home/student001/JSilicon2/work/pnr/innovus_temp_91111_465e4ac5-b2c6-4aaa-bb81-8d6131065257_gjchamber_student001_KfoLAy/.AAE_IKffn8/.AAE_91111_465e4ac5-b2c6-4aaa-bb81-8d6131065257/waveform.data...
+Loading CTE timing window with TwFlowType 0...(CPU = 0:00:00.0, REAL = 0:00:00.0, MEM = 2394.5M)
+Add other clocks and setupCteToAAEClockMapping during iter 1
+Loading CTE timing window is completed (CPU = 0:00:00.0, REAL = 0:00:00.0, MEM = 2394.7M)
+Starting SI iteration 2
+Start delay calculation (fullDC) (1 T). (MEM=2373.89)
+**DIAG: Timing query is performed without necessary timing update!
+Glitch Analysis: View VIEW_TYPICAL -- Total Number of Nets Skipped = 0.
+Glitch Analysis: View VIEW_TYPICAL -- Total Number of Nets Analyzed = 636.
+Total number of fetched objects 636
+AAE_INFO: Total number of nets for which stage creation was skipped for all views 0
+AAE_INFO-618: Total number of nets in the design is 704,  12.1 percent of the nets selected for SI analysis
+End delay calculation. (MEM=2391.07 CPU=0:00:00.1 REAL=0:00:00.0)
+End delay calculation (fullDC). (MEM=2391.07 CPU=0:00:00.1 REAL=0:00:00.0)
+innovus 8> saveDesign jsilicon_extracted.enc
+The in-memory database contained RC information but was not saved. To save
+the RC information, use saveDesign's -rc option. Note: Saving RC information can be quite large,
+so it should only be saved when it is really desired.
+#% Begin save design ... (date=11/18 12:22:47, mem=2361.3M)
+% Begin Save ccopt configuration ... (date=11/18 12:22:47, mem=2361.3M)
+% End Save ccopt configuration ... (date=11/18 12:22:47, total cpu=0:00:00.0, real=0:00:00.0, peak res=2363.0M, current mem=2363.0M)
+% Begin Save netlist data ... (date=11/18 12:22:47, mem=2380.3M)
+Writing Binary DB to jsilicon_extracted.enc.dat/tt_um_Jsilicon.v.bin in single-threaded mode...
+% End Save netlist data ... (date=11/18 12:22:47, total cpu=0:00:00.0, real=0:00:00.0, peak res=2380.4M, current mem=2380.4M)
+Saving symbol-table file ...
+Saving congestion map file jsilicon_extracted.enc.dat/tt_um_Jsilicon.route.congmap.gz ...
+% Begin Save AAE data ... (date=11/18 12:22:47, mem=2380.9M)
+Saving AAE Data ...
+% End Save AAE data ... (date=11/18 12:22:47, total cpu=0:00:00.2, real=0:00:00.0, peak res=2440.4M, current mem=2381.5M)
+Saving preference file jsilicon_extracted.enc.dat/gui.pref.tcl ...
+Saving mode setting ...
+**WARN: (IMPMF-5054):   fill_setting_save command is obsolete and should not be used any more. It still works in this release but will be removed in future release. Recommend to use Pegasus metal fill flow which is the replacement.
+Saving global file ...
+% Begin Save floorplan data ... (date=11/18 12:22:47, mem=2387.1M)
+Saving floorplan file ...
+Convert 0 swires and 0 svias from compressed groups
+% End Save floorplan data ... (date=11/18 12:22:48, total cpu=0:00:00.0, real=0:00:01.0, peak res=2387.5M, current mem=2387.5M)
+Saving PG file jsilicon_extracted.enc.dat/tt_um_Jsilicon.pg.gz, version#2, (Created by Innovus v23.13-s082_1 on Tue Nov 18 12:22:48 2025)
+*** Completed savePGFile (cpu=0:00:00.0 real=0:00:00.0 mem=3175.2M) ***
+*info - save blackBox cells to lef file jsilicon_extracted.enc.dat/tt_um_Jsilicon.bbox.lef
+Saving Drc markers ...
+... 27 markers are saved ...
+... 0 geometry drc markers are saved ...
+... 0 antenna drc markers are saved ...
+% Begin Save placement data ... (date=11/18 12:22:48, mem=2387.5M)
+** Saving stdCellPlacement_binary (version# 2) ...
+Save Adaptive View Pruning View Names to Binary file
+% End Save placement data ... (date=11/18 12:22:48, total cpu=0:00:00.0, real=0:00:00.0, peak res=2387.6M, current mem=2387.6M)
+% Begin Save routing data ... (date=11/18 12:22:48, mem=2387.6M)
+Saving route file ...
+*** Completed saveRoute (cpu=0:00:00.0 real=0:00:00.0 mem=3175.2M) ***
+% End Save routing data ... (date=11/18 12:22:48, total cpu=0:00:00.0, real=0:00:00.0, peak res=2387.8M, current mem=2387.8M)
+Saving property file jsilicon_extracted.enc.dat/tt_um_Jsilicon.prop
+*** Completed saveProperty (cpu=0:00:00.0 real=0:00:00.0 mem=3178.2M) ***
+#Saving pin access data to file jsilicon_extracted.enc.dat/tt_um_Jsilicon.apa ...
+% Begin Save power constraints data ... (date=11/18 12:22:48, mem=2388.4M)
+% End Save power constraints data ... (date=11/18 12:22:48, total cpu=0:00:00.0, real=0:00:00.0, peak res=2388.4M, current mem=2388.4M)
+Generated self-contained design jsilicon_extracted.enc.dat
+#% End save design ... (date=11/18 12:22:48, total cpu=0:00:01.3, real=0:00:01.0, peak res=2440.4M, current mem=2389.6M)
+
+*** Summary of all messages that are not suppressed in this session:
+Severity  ID               Count  Summary
+WARNING   IMPMF-5054           1  fill_setting_save command is obsolete an...
+*** Message Summary: 1 warning(s), 0 error(s)
+
+0
+innovus 9>
+
+```
+
+
 ### Step 5: 최종 리포트
 ```tcl
+innovus
+
 restoreDesign jsilicon_extracted.enc.dat tt_um_Jsilicon
 
 file mkdir ../../reports/final
@@ -4838,14 +5120,73 @@ summaryReport -outfile ../../reports/final/summary.rpt
 exit
 ```
 
+```
+innovus 10> file mkdir ../../reports/final
+innovus 11> report_timing -late > ../../reports/final/timing_summary.rpt
+AAE_INFO: opIsDesignInPostRouteState() is 1
+AAE_INFO: resetNetProps viewIdx 0
+Starting SI iteration 1 using Infinite Timing Windows
+#################################################################################
+# Design Stage: PostRoute
+# Design Name: tt_um_Jsilicon
+# Design Mode: 90nm
+# Analysis Mode: MMMC Non-OCV
+# Parasitics Mode: SPEF/RCDB
+# Signoff Settings: SI On
+#################################################################################
+AAE_INFO: 1 threads acquired from CTE.
+Calculate delays in Single mode...
+Start delay calculation (fullDC) (1 T). (MEM=2420.84)
+Total number of fetched objects 636
+AAE_INFO: Total number of nets for which stage creation was skipped for all views 0
+AAE_INFO-618: Total number of nets in the design is 704,  90.3 percent of the nets selected for SI analysis
+End delay calculation. (MEM=2429.05 CPU=0:00:00.1 REAL=0:00:00.0)
+End delay calculation (fullDC). (MEM=2429.05 CPU=0:00:00.2 REAL=0:00:00.0)
+Save waveform /home/student001/JSilicon2/work/pnr/innovus_temp_91111_465e4ac5-b2c6-4aaa-bb81-8d6131065257_gjchamber_student001_KfoLAy/.AAE_IKffn8/.AAE_91111_465e4ac5-b2c6-4aaa-bb81-8d6131065257/waveform.data...
+Loading CTE timing window with TwFlowType 0...(CPU = 0:00:00.0, REAL = 0:00:00.0, MEM = 2429.2M)
+Add other clocks and setupCteToAAEClockMapping during iter 1
+Loading CTE timing window is completed (CPU = 0:00:00.0, REAL = 0:00:00.0, MEM = 2429.2M)
+Starting SI iteration 2
+Calculate delays in Single mode...
+Start delay calculation (fullDC) (1 T). (MEM=2423.17)
+Total number of fetched objects 636
+AAE_INFO: Total number of nets for which stage creation was skipped for all views 0
+AAE_INFO-618: Total number of nets in the design is 704,  1.8 percent of the nets selected for SI analysis
+End delay calculation. (MEM=2427.17 CPU=0:00:00.0 REAL=0:00:00.0)
+End delay calculation (fullDC). (MEM=2427.17 CPU=0:00:00.0 REAL=0:00:00.0)
+innovus 12> report_power > ../../reports/final/power.rpt
+innovus 13> report_area > ../../reports/final/area.rpt
+innovus 14>
+innovus 14> summaryReport -outfile ../../reports/final/summary.rpt
+Start to collect the design information.
+Build netlist information for Cell tt_um_Jsilicon.
+Finished collecting the design information.
+Generating standard cells used in the design report.
+Analyze library ...
+Analyze netlist ...
+Generate no-driven nets information report.
+Analyze timing ...
+Analyze floorplan/placement ...
+Analysis Routing ...
+Report saved in file ../../reports/final/summary.rpt
+innovus 15>
+
+```
+
+
 ### Step 6: GDS 생성 🎉
 
 ```tcl
+innovus
 restoreDesign jsilicon_extracted.enc.dat tt_um_Jsilicon
 
 file mkdir ../../results/gds
 
 # GDS 생성
+file mkdir ../../results/gds
+streamOut ../../results/gds/tt_um_Jsilicon.gds
+
+~~ 이하는 실행하지 마시로 ~~
 streamOut ../../results/gds/tt_um_Jsilicon.gds \
     -mapFile ../../tech/lef/gds.map \
     -stripes 1 \
@@ -4853,6 +5194,299 @@ streamOut ../../results/gds/tt_um_Jsilicon.gds \
     -mode ALL
 
 exit
+```
+
+```
+
+innovus 18> file mkdir ../../results/gds
+innovus 19> streamOut ../../results/gds/tt_um_Jsilicon.gds
+Parse flat map file 'streamOut.map'
+Writing GDSII file ...
+        ****** db unit per micron = 2000 ******
+        ****** output gds2 file unit per micron = 2000 ******
+        ****** unit scaling factor = 1 ******
+Output for instance
+Output for bump
+Output for physical terminals
+Output for logical terminals
+Output for regular nets
+Output for special nets and metal fills
+Convert 0 swires and 0 svias from compressed groups
+Output for via structure generation total number 14
+Statistics for GDS generated (version 3)
+----------------------------------------
+Stream Out Layer Mapping Information:
+GDS Layer Number          GDS Layer Name
+----------------------------------------
+    212                             COMP
+    213                          DIEAREA
+    206                          metal10
+    196                             via9
+    205                          metal10
+    185                           metal9
+    195                             via9
+    175                             via8
+    204                          metal10
+    184                           metal9
+    164                           metal8
+    8                             metal1
+    22                              via1
+    2                            contact
+    64                              via3
+    44                              via2
+    5                            contact
+    43                              via2
+    23                              via1
+    1                            contact
+    9                             metal1
+    29                            metal2
+    50                            metal3
+    10                            metal1
+    30                            metal2
+    71                            metal4
+    11                            metal1
+    51                            metal3
+    31                            metal2
+    65                              via3
+    26                              via1
+    85                              via4
+    52                            metal3
+    32                            metal2
+    72                            metal4
+    92                            metal5
+    47                              via2
+    3                            contact
+    86                              via4
+    106                             via5
+    200                          metal10
+    161                           metal8
+    78                            metal4
+    38                            metal2
+    58                            metal3
+    97                            metal5
+    117                           metal6
+    53                            metal3
+    14                            metal1
+    73                            metal4
+    93                            metal5
+    113                           metal6
+    198                          metal10
+    178                           metal9
+    158                           metal8
+    75                            metal4
+    36                            metal2
+    16                            metal1
+    55                            metal3
+    119                           metal6
+    68                              via3
+    24                              via1
+    4                            contact
+    107                             via5
+    127                             via6
+    182                           metal9
+    59                            metal3
+    79                            metal4
+    99                            metal5
+    118                           metal6
+    138                           metal7
+    173                             via8
+    70                              via3
+    90                              via4
+    109                             via5
+    129                             via6
+    202                          metal10
+    183                           metal9
+    163                           metal8
+    143                           metal7
+    190                             via9
+    170                             via8
+    67                              via3
+    48                              via2
+    28                              via1
+    87                              via4
+    131                             via6
+    180                           metal9
+    160                           metal8
+    101                           metal5
+    121                           metal6
+    141                           metal7
+    35                            metal2
+    74                            metal4
+    94                            metal5
+    114                           metal6
+    134                           metal7
+    176                           metal9
+    156                           metal8
+    13                            metal1
+    33                            metal2
+    77                            metal4
+    116                           metal6
+    136                           metal7
+    197                          metal10
+    177                           metal9
+    157                           metal8
+    54                            metal3
+    34                            metal2
+    15                            metal1
+    98                            metal5
+    137                           metal7
+    203                          metal10
+    159                           metal8
+    80                            metal4
+    100                           metal5
+    120                           metal6
+    139                           metal7
+    199                          metal10
+    179                           metal9
+    57                            metal3
+    37                            metal2
+    17                            metal1
+    76                            metal4
+    96                            metal5
+    140                           metal7
+    201                          metal10
+    181                           metal9
+    162                           metal8
+    122                           metal6
+    142                           metal7
+    45                              via2
+    6                            contact
+    25                              via1
+    89                              via4
+    128                             via6
+    148                             via7
+    169                             via8
+    66                              via3
+    46                              via2
+    7                            contact
+    27                              via1
+    110                             via5
+    149                             via7
+    194                             via9
+    91                              via4
+    111                             via5
+    130                             via6
+    150                             via7
+    171                             via8
+    112                             via5
+    132                             via6
+    151                             via7
+    191                             via9
+    69                              via3
+    49                              via2
+    88                              via4
+    108                             via5
+    152                             via7
+    192                             via9
+    172                             via8
+    133                             via6
+    153                             via7
+    193                             via9
+    174                             via8
+    154                             via7
+    56                            metal3
+    12                            metal1
+    95                            metal5
+    115                           metal6
+    135                           metal7
+    155                           metal8
+    18                            metal1
+    19                            metal1
+    39                            metal2
+    60                            metal3
+    20                            metal1
+    40                            metal2
+    81                            metal4
+    21                            metal1
+    61                            metal3
+    41                            metal2
+    62                            metal3
+    42                            metal2
+    82                            metal4
+    102                           metal5
+    210                          metal10
+    63                            metal3
+    83                            metal4
+    103                           metal5
+    123                           metal6
+    208                          metal10
+    188                           metal9
+    168                           metal8
+    84                            metal4
+    104                           metal5
+    124                           metal6
+    144                           metal7
+    186                           metal9
+    166                           metal8
+    126                           metal6
+    146                           metal7
+    207                          metal10
+    187                           metal9
+    167                           metal8
+    147                           metal7
+    209                          metal10
+    189                           metal9
+    105                           metal5
+    125                           metal6
+    145                           metal7
+    165                           metal8
+
+
+Stream Out Information Processed for GDS version 3:
+Units: 2000 DBU
+
+Object                             Count
+----------------------------------------
+Instances                            587
+
+Ports/Pins                             0
+
+Nets                                5684
+    metal layer metal1               712
+    metal layer metal2              3368
+    metal layer metal3              1501
+    metal layer metal4               103
+
+    Via Instances                   3229
+
+Special Nets                          28
+    metal layer metal1                22
+    metal layer metal8                 6
+
+    Via Instances                    462
+
+Metal Fills                            0
+
+    Via Instances                      0
+
+Metal FillOPCs                         0
+
+    Via Instances                      0
+
+Metal FillDRCs                         0
+
+    Via Instances                      0
+
+Text                                 647
+    metal layer metal1               101
+    metal layer metal2               473
+    metal layer metal3                71
+    metal layer metal4                 2
+
+
+Blockages                              0
+
+
+Custom Text                            0
+
+
+Custom Box                             0
+
+Trim Metal                             0
+
+######Streamout is finished!
+innovus 20>
+c
 ```
 
 📊 최종 파일 확인
@@ -4865,6 +5499,37 @@ ls -lh ~/JSilicon2/results/gds/tt_um_Jsilicon.gds
 # 기타 파일
 ls -lh ~/JSilicon2/results/extraction/
 ls -lh ~/JSilicon2/reports/final/
+```
+
+```
+# GDS 파일 확인
+ls -lh ~/JSilicon2/results/gds/tt_um_Jsilicon.gds
+
+# 출력: 크기 564K 
+-rw-r--r-- 1 student001 student001 564K Nov 18 12:28 /home/student001/JSilicon2/results/gds/tt_um_Jsilicon.gds
+
+# 파일 타입
+file ~/JSilicon2/results/gds/tt_um_Jsilicon.gds
+# 출력:
+/home/student001/JSilicon2/results/gds/tt_um_Jsilicon.gds: GDSII Stream file version 3.0
+
+# 압축 (선택)
+gzip -k ~/JSilicon2/results/gds/tt_um_Jsilicon.gds
+```
+
+---
+
+## 📊 예상 GDS 크기
+```
+정상 범위: 100KB ~ 10MB
+
+JSilicon 예상:
+  - Cell count: ~600
+  - Area: 1829 μm²
+  - 예상 GDS: 300KB ~ 1MB
+  
+⚠️ 50KB 미만: 문제 있음
+✓ 100KB 이상: 정상
 ```
 
 ---
