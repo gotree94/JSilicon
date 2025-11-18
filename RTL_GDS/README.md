@@ -2373,15 +2373,277 @@ cat reports/pnr/summary.rpt
 
 **주요 메트릭:**
 
-```bash
-# 타이밍
-grep -A 10 "Timing Summary" reports/pnr/summary.rpt
+```
+cd ~/JSilicon2
 
-# 면적
-grep -A 5 "Design Area" reports/pnr/summary.rpt
+# 1. 타이밍
+cat reports/pnr/timing_summary.rpt
 
-# 전력
-grep -A 10 "Power" reports/pnr/power_final.rpt
+# 2. 면적
+cat reports/pnr/area_final.rpt
+
+# 3. 전력
+head -30 reports/pnr/power_final.rpt
+grep -i "total" reports/pnr/power_final.rpt
+
+# 4. Violations
+head -20 reports/pnr/violations.rpt
+wc -l reports/pnr/violations.rpt
+
+# 5. Summary (전체)
+less reports/pnr/summary.rpt
+
+# 6. Geometry/Connectivity
+cat reports/pnr/geometry.rpt
+cat reports/pnr/connectivity.rpt
+
+## 📁 생성된 리포트 파일들
+reports/pnr/
+├── timing_summary.rpt    (4.5 KB)  - 타이밍 요약
+├── timing_setup.rpt      (40 KB)   - Setup 타이밍 상세
+├── timing_hold.rpt       (17 KB)   - Hold 타이밍 상세
+├── area_final.rpt        (368 B)   - 면적 리포트
+├── power_final.rpt       (7.8 KB)  - 전력 리포트
+├── violations.rpt        (9.9 KB)  - Constraint violations
+├── geometry.rpt          (488 B)   - DRC 체크
+├── connectivity.rpt      (2.7 KB)  - 연결성 체크
+└── summary.rpt           (22 KB)   - 전체 요약
+```
+
+* quick_check.csh
+
+```
+################################################################################
+# JSilicon P&R 결과 확인 가이드
+# reports/pnr/ 디렉토리의 리포트 분석
+################################################################################
+
+cd ~/JSilicon2
+
+################################################################################
+# 1. 타이밍 결과 확인
+################################################################################
+
+echo "=========================================="
+echo "1. 타이밍 결과"
+echo "=========================================="
+
+# 1-1. Timing Summary (전체 요약)
+echo ""
+echo "=== Timing Summary (전체) ==="
+cat reports/pnr/timing_summary.rpt
+
+# 1-2. Setup Timing (최악의 경로 10개)
+echo ""
+echo "=== Setup Timing (Critical Paths) ==="
+head -50 reports/pnr/timing_setup.rpt
+
+# 1-3. Hold Timing (최악의 경로 10개)
+echo ""
+echo "=== Hold Timing (Critical Paths) ==="
+head -50 reports/pnr/timing_hold.rpt
+
+# 1-4. Summary 파일에서 타이밍 정보
+echo ""
+echo "=== Summary - Timing Section ==="
+grep -A 20 "Timing" reports/pnr/summary.rpt
+
+# WNS/TNS 확인
+echo ""
+echo "=== WNS/TNS (Worst/Total Negative Slack) ==="
+grep -E "WNS|TNS|Slack" reports/pnr/summary.rpt
+
+################################################################################
+# 2. 면적 결과 확인
+################################################################################
+
+echo ""
+echo "=========================================="
+echo "2. 면적 결과"
+echo "=========================================="
+
+# 2-1. Area Report (상세)
+echo ""
+echo "=== Area Report ==="
+cat reports/pnr/area_final.rpt
+
+# 2-2. Summary에서 면적 정보
+echo ""
+echo "=== Summary - Design Area ==="
+grep -A 10 "Design Area" reports/pnr/summary.rpt
+
+# 2-3. Cell Count
+echo ""
+echo "=== Cell Statistics ==="
+grep -A 10 "Instance" reports/pnr/summary.rpt
+
+# 2-4. Utilization
+echo ""
+echo "=== Core Utilization ==="
+grep -i "utilization" reports/pnr/summary.rpt
+
+################################################################################
+# 3. 전력 결과 확인
+################################################################################
+
+echo ""
+echo "=========================================="
+echo "3. 전력 결과"
+echo "=========================================="
+
+# 3-1. Power Summary
+echo ""
+echo "=== Power Summary ==="
+head -30 reports/pnr/power_final.rpt
+
+# 3-2. Total Power
+echo ""
+echo "=== Total Power ==="
+grep -A 5 -i "total power" reports/pnr/power_final.rpt
+
+# 3-3. Power by hierarchy
+echo ""
+echo "=== Power Breakdown ==="
+grep -A 20 "Internal" reports/pnr/power_final.rpt
+
+################################################################################
+# 4. Violations 확인
+################################################################################
+
+echo ""
+echo "=========================================="
+echo "4. Constraint Violations"
+echo "=========================================="
+
+# 4-1. Violation 개수 확인
+echo ""
+echo "=== Violation Count ==="
+wc -l reports/pnr/violations.rpt
+
+# 4-2. Violations 내용
+echo ""
+echo "=== Violations (첫 30줄) ==="
+head -30 reports/pnr/violations.rpt
+
+# 4-3. Setup/Hold Violations
+echo ""
+echo "=== Timing Violations ==="
+grep -i "violated" reports/pnr/violations.rpt
+
+################################################################################
+# 5. Geometry & Connectivity 확인
+################################################################################
+
+echo ""
+echo "=========================================="
+echo "5. Physical Verification"
+echo "=========================================="
+
+# 5-1. Geometry Check
+echo ""
+echo "=== Geometry Violations ==="
+cat reports/pnr/geometry.rpt
+
+# 5-2. Connectivity Check
+echo ""
+echo "=== Connectivity Issues ==="
+cat reports/pnr/connectivity.rpt
+
+################################################################################
+# 6. Summary Report (전체 개요)
+################################################################################
+
+echo ""
+echo "=========================================="
+echo "6. Overall Summary"
+echo "=========================================="
+
+# 6-1. Summary 파일 전체 (주요 섹션만)
+echo ""
+echo "=== Design Statistics ==="
+grep -A 5 "Design Statistics" reports/pnr/summary.rpt
+
+echo ""
+echo "=== Instance Count ==="
+grep -A 10 "Instance" reports/pnr/summary.rpt
+
+echo ""
+echo "=== Net Statistics ==="
+grep -A 10 "Net" reports/pnr/summary.rpt
+
+################################################################################
+# 7. 한눈에 보기 (요약)
+################################################################################
+
+echo ""
+echo "=========================================="
+echo "7. 핵심 결과 요약"
+echo "=========================================="
+
+echo ""
+echo "타이밍:"
+echo "--------"
+grep -E "setup|hold|WNS|TNS" reports/pnr/timing_summary.rpt | head -10
+
+echo ""
+echo "면적:"
+echo "-----"
+grep -A 3 "Total area" reports/pnr/area_final.rpt
+
+echo ""
+echo "전력:"
+echo "-----"
+grep "Total" reports/pnr/power_final.rpt | head -5
+
+echo ""
+echo "Violations:"
+echo "-----------"
+set viol_lines = `wc -l < reports/pnr/violations.rpt`
+if ( $viol_lines > 1 ) then
+    echo "⚠ Found violations: $viol_lines"
+else
+    echo "✓ No violations"
+endif
+
+echo ""
+echo "=========================================="
+
+################################################################################
+# 간단 버전 (빠른 확인용)
+################################################################################
+
+# 아래 명령어들을 개별적으로 사용 가능:
+
+# 타이밍만 빠르게 확인
+# cat reports/pnr/timing_summary.rpt
+
+# 면적만 빠르게 확인
+# cat reports/pnr/area_final.rpt
+
+# 전력만 빠르게 확인
+# head -20 reports/pnr/power_final.rpt
+
+# Summary 전체 확인
+# less reports/pnr/summary.rpt
+
+################################################################################
+# grep 활용 예제
+################################################################################
+
+# Setup timing만
+# grep -A 30 "Setup" reports/pnr/timing_summary.rpt
+
+# Hold timing만
+# grep -A 30 "Hold" reports/pnr/timing_summary.rpt
+
+# 특정 net 검색
+# grep "clk" reports/pnr/timing_setup.rpt
+
+# 전력에서 leakage만
+# grep -i "leakage" reports/pnr/power_final.rpt
+
+# Summary에서 특정 섹션
+# grep -A 20 "Instance Count" reports/pnr/summary.rpt
 ```
 
 ---
