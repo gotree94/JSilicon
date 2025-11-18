@@ -4301,94 +4301,6 @@ cat reports/pnr/summary.rpt
 
 ---
 
-# 작업 자동화
-
-* 1. run_full_flow.csh - 전체 자동화 실행
-
-```csh
-chmod +x run_full_flow.csh
-./run_full_flow.csh
-```
-
-  * Synthesis → P&R → STA → GDS 생성까지 자동 실행
-  * 각 단계마다 결과 확인 및 계속 여부 확인
-
-* 2. check_status.csh - 현재 상태 확인
-
-```csh
-chmod +x check_status.csh
-./check_status.csh
-```
-
-   * 각 단계별 완료 여부 체크
-   * 리포트 요약 표시
-   * 다음 단계 제안
-
-* 3. generate_gds.csh - GDS 생성 및 테이프아웃 준비
-
-```csh
-chmod +x generate_gds.csh
-./generate_gds.csh
-
-- GDS 파일 생성
-- DRC/LVS 준비
-- 테이프아웃 체크리스트
-
-## 🔄 완전한 설계 흐름
-1. RTL Synthesis (Genus)
-   ├── Input:  src/*.v
-   └── Output: results/netlist/tt_um_Jsilicon_synth.v
-               reports/synthesis/*.rpt
-
-2. Place & Route (Innovus)
-   ├── Input:  synthesized netlist
-   └── Output: results/def/tt_um_Jsilicon.def
-               results/netlist/tt_um_Jsilicon_final.v
-               reports/pnr/*.rpt
-
-3. Static Timing Analysis (Tempus)
-   ├── Input:  final netlist + DEF
-   └── Output: reports/sta/*.rpt
-
-4. GDS Generation (Innovus)
-   ├── Input:  placed & routed design
-   └── Output: results/gds/tt_um_Jsilicon.gds
-               results/tt_um_Jsilicon.lef
-
-5. Verification (Magic/Calibre)
-   ├── DRC: Design Rule Check
-   ├── LVS: Layout vs Schematic
-   └── Output: reports/drc/*.rpt
-               reports/lvs/*.rpt
-
-6. Tapeout Package
-   └── GDS + LEF + 검증 리포트
-```
-
-* 🚀 실행 순서
-```csh
-# 1. 현재 상태 확인
-./check_status.csh
-
-# 2-a. 전체 자동 실행 (추천)
-./run_full_flow.csh
-
-# 또는 2-b. 단계별 수동 실행
-cd work/synthesis
-genus -f ../../scripts/genus/synthesis.tcl |& tee synthesis.log
-cd ../pnr
-innovus -init ../../scripts/innovus/pnr_flow.tcl |& tee pnr.log
-cd ../..
-
-# 3. GDS 생성 및 검증
-./generate_gds.csh
-
-# 4. 최종 상태 확인
-./check_status.csh
-```
-
----
-
 ## 📚 참고 자료
 
 ### 학습 자료
@@ -4526,3 +4438,91 @@ SOFTWARE.
 
 ---
 
+
+---
+
+# 작업 자동화 (확인중)
+
+* 1. run_full_flow.csh - 전체 자동화 실행
+
+```csh
+chmod +x run_full_flow.csh
+./run_full_flow.csh
+```
+
+  * Synthesis → P&R → STA → GDS 생성까지 자동 실행
+  * 각 단계마다 결과 확인 및 계속 여부 확인
+
+* 2. check_status.csh - 현재 상태 확인
+
+```csh
+chmod +x check_status.csh
+./check_status.csh
+```
+
+   * 각 단계별 완료 여부 체크
+   * 리포트 요약 표시
+   * 다음 단계 제안
+
+* 3. generate_gds.csh - GDS 생성 및 테이프아웃 준비
+
+```csh
+chmod +x generate_gds.csh
+./generate_gds.csh
+
+- GDS 파일 생성
+- DRC/LVS 준비
+- 테이프아웃 체크리스트
+
+## 🔄 완전한 설계 흐름
+1. RTL Synthesis (Genus)
+   ├── Input:  src/*.v
+   └── Output: results/netlist/tt_um_Jsilicon_synth.v
+               reports/synthesis/*.rpt
+
+2. Place & Route (Innovus)
+   ├── Input:  synthesized netlist
+   └── Output: results/def/tt_um_Jsilicon.def
+               results/netlist/tt_um_Jsilicon_final.v
+               reports/pnr/*.rpt
+
+3. Static Timing Analysis (Tempus)
+   ├── Input:  final netlist + DEF
+   └── Output: reports/sta/*.rpt
+
+4. GDS Generation (Innovus)
+   ├── Input:  placed & routed design
+   └── Output: results/gds/tt_um_Jsilicon.gds
+               results/tt_um_Jsilicon.lef
+
+5. Verification (Magic/Calibre)
+   ├── DRC: Design Rule Check
+   ├── LVS: Layout vs Schematic
+   └── Output: reports/drc/*.rpt
+               reports/lvs/*.rpt
+
+6. Tapeout Package
+   └── GDS + LEF + 검증 리포트
+```
+
+* 🚀 실행 순서
+```csh
+# 1. 현재 상태 확인
+./check_status.csh
+
+# 2-a. 전체 자동 실행 (추천)
+./run_full_flow.csh
+
+# 또는 2-b. 단계별 수동 실행
+cd work/synthesis
+genus -f ../../scripts/genus/synthesis.tcl |& tee synthesis.log
+cd ../pnr
+innovus -init ../../scripts/innovus/pnr_flow.tcl |& tee pnr.log
+cd ../..
+
+# 3. GDS 생성 및 검증
+./generate_gds.csh
+
+# 4. 최종 상태 확인
+./check_status.csh
+```
