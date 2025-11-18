@@ -1,4 +1,4 @@
-# JSilicon: RTL-to-GDS Design Flow Tutorial
+c# JSilicon: RTL-to-GDS Design Flow Tutorial
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Technology: FreePDK45](https://img.shields.io/badge/Technology-FreePDK45-blue.svg)](https://github.com/baichen318/FreePDK45)
@@ -2673,16 +2673,15 @@ echo "=========================================="
 
 ---
 
-### 사용 도구
+#### 사용 도구
 - **Synthesis**: Cadence Genus
 - **Place & Route**: Cadence Innovus 23.13
 - **Technology**: FreePDK45 (gscl45nm)
-
 ---
 
-## 디자인 스펙
+#### 디자인 스펙
 
-### 칩 사양
+#### 칩 사양
 | 항목 | 값 |
 |------|-----|
 | **Technology** | FreePDK45 (45nm) |
@@ -2692,7 +2691,7 @@ echo "=========================================="
 | **Cell Count** | 587 cells |
 | **Utilization** | 64.4% |
 
-### 클럭 사양
+#### 클럭 사양
 | 항목 | 값 |
 |------|-----|
 | **Target Clock** | 200 MHz (5.0 ns) |
@@ -2700,11 +2699,11 @@ echo "=========================================="
 
 ---
 
-## P&R 결과 분석
+#### P&R 결과 분석
 
-### 5.1. 타이밍 분석
+##### 5.1. 타이밍 분석
 
-#### 🔴 Setup Timing (최대 동작 주파수)
+###### 🔴 Setup Timing (최대 동작 주파수)
 
 **Status**: ⚠️ **VIOLATED** (최적화 필요)
 
@@ -2752,7 +2751,7 @@ Setup Slack:                 -0.011 ns ❌
 - ✅ 클럭 주파수 하향 조정 (200MHz → 150MHz)
 - ✅ 게이트 크기 증가 (INVX1 → INVX2/INVX4)
 
-#### 🔴 Hold Timing (최소 지연)
+###### 🔴 Hold Timing (최소 지연)
 
 **Status**: ⚠️ **VIOLATED** (버퍼 삽입 필요)
 
@@ -2809,9 +2808,9 @@ Achievable:     ~162 MHz (6.17 ns)
 
 ---
 
-### 5.2. 면적 분석
+##### 5.2. 면적 분석
 
-#### 📐 칩 면적
+###### 📐 칩 면적
 
 | 구분 | 크기 (μm²) | 비율 |
 |------|-----------|------|
@@ -2832,7 +2831,7 @@ Utilization = Std Cell Area / Core Area
             = 64.4%
 ```
 
-#### 📦 모듈별 면적
+###### 📦 모듈별 면적
 
 | Module | Instances | Area (μm²) | 비율 |
 |--------|-----------|-----------|------|
@@ -2863,9 +2862,9 @@ Utilization = Std Cell Area / Core Area
 
 ---
 
-### 5.3. 전력 분석
+##### 5.3. 전력 분석
 
-#### ⚡ 전력 소모 요약
+###### ⚡ 전력 소모 요약
 
 | 구분 | 전력 (mW) | 비율 |
 |------|----------|------|
@@ -2877,7 +2876,7 @@ Utilization = Std Cell Area / Core Area
 **클럭 주파수**: 200 MHz  
 **전원 전압**: 1.1V
 
-#### 📊 전력 분포 상세
+###### 📊 전력 분포 상세
 
 **블록별 전력 소모**:
 
@@ -2901,7 +2900,7 @@ Leakage Power:            0.013 mW (2.3%)
   - 45nm 공정 특성상 낮은 누설 전류
 ```
 
-#### 🔋 전력 효율
+###### 🔋 전력 효율
 
 | 항목 | 값 |
 |------|-----|
@@ -2920,7 +2919,7 @@ Energy/Cycle  = Total Power / Frequency
               = 2.81 pJ/cycle
 ```
 
-#### 🌟 최대 전력 소모 인스턴스
+###### 🌟 최대 전력 소모 인스턴스
 
 ```
 Highest Average Power: 
@@ -2932,15 +2931,15 @@ Highest Leakage Power:
 
 ---
 
-### 5.4. Violations 분석
+##### 5.4. Violations 분석
 
-#### ⚠️ Constraint Violations 요약
+###### ⚠️ Constraint Violations 요약
 
 **Total Violations**: 126 lines
 
 **주요 위반 사항**:
 
-##### Setup Timing Violations (2건)
+###### Setup Timing Violations (2건)
 ```
 1. core_inst_uart_inst/data_reg_reg[1]/D
    - Slack: -0.011 ns
@@ -2968,7 +2967,7 @@ Highest Leakage Power:
 - 레지스터 간 경로가 너무 짧음 (Half Adder 단일 단계)
 - 버퍼 삽입 필요
 
-#### 📋 Violation 카테고리
+###### 📋 Violation 카테고리
 
 | Check Type | Count | Status |
 |-----------|-------|--------|
@@ -2994,9 +2993,9 @@ Highest Leakage Power:
 
 ---
 
-### 5.5. Physical Verification
+##### 5.5. Physical Verification
 
-#### ✅ Geometry Check (DRC)
+###### ✅ Geometry Check (DRC)
 
 **Status**: ✅ **PASS** - No violations
 
@@ -3017,7 +3016,7 @@ Result: No DRC violations were found ✓
 - Metal spacing, width, via 규칙 만족
 - 제조 가능한 레이아웃
 
-#### ⚠️ Connectivity Check
+###### ⚠️ Connectivity Check
 
 **Status**: ⚠️ **27 Issues** (Minor - Dangling Wires)
 
@@ -3071,7 +3070,7 @@ editPowerVia -add_vias 1 -orthogonal_only 1
 verifyConnectivity -type special
 ```
 
-#### 📊 Physical Summary
+###### 📊 Physical Summary
 
 | Check | Result | Details |
 |-------|--------|---------|
@@ -3082,7 +3081,7 @@ verifyConnectivity -type special
 
 ---
 
-## 📁 디렉토리 구조
+###### 📁 디렉토리 구조
 
 ```
 JSilicon2/
@@ -3139,7 +3138,7 @@ JSilicon2/
 
 ---
 
-## 📊 성능 요약
+##### 📊 성능 요약
 
 | 항목 | 타겟 | 실제 | Status |
 |------|------|------|--------|
@@ -3153,9 +3152,9 @@ JSilicon2/
 
 ---
 
-## 🔄 개선 사항
+##### 🔄 개선 사항
 
-### 우선순위 1 (Critical)
+###### 우선순위 1 (Critical)
 - [ ] Setup timing violation 해결
   - 클럭 주파수 조정: 200MHz → 150MHz
   - 입력 지연 재설정: 1.5ns → 1.0ns
@@ -3164,12 +3163,12 @@ JSilicon2/
   - CTS 재실행 (현재 ideal clock 사용)
   - 지연 셀 삽입
 
-### 우선순위 2 (Important)
+###### 우선순위 2 (Important)
 - [ ] Power grid dangling wire 수정
   - Power stripe 연결 보강
   - Via 추가
 
-### 우선순위 3 (Nice to have)
+###### 우선순위 3 (Nice to have)
 - [ ] 면적 최적화
   - Utilization 64% → 70% 증가 가능
   
@@ -3179,9 +3178,9 @@ JSilicon2/
 
 ---
 
-## 📚 GDS 생성 단계별 수동 실행
+##### 📚 GDS 생성 단계별 수동 실행
 
-### Step 1: 타이밍 최적화 (필수)
+###### Step 1: 타이밍 최적화 (필수)
 ```csh
 cd ~/JSilicon2/work/pnr
 innovus
@@ -3210,7 +3209,7 @@ saveDesign jsilicon_final_opt.enc
 exit
 ```
 
-### Step 2: LVS 검증
+###### Step 2: LVS 검증
 ```csh
 cd ~/JSilicon2/work/pnr
 innovus -init ../../scripts/innovus/run_lvs.tcl
@@ -3731,7 +3730,7 @@ Database:     pnr
 
 ```
 
-### Step 3: DRC 확인
+###### Step 3: DRC 확인
 ```tcl
 innovus
 
@@ -3777,7 +3776,7 @@ End Summary
 1
 ```
 
-### Step 4: RC Extraction
+###### Step 4: RC Extraction
 ```tcl
 innovus
 
@@ -3977,7 +3976,7 @@ innovus 9>
 ```
 
 
-### Step 5: 최종 리포트
+###### Step 5: 최종 리포트
 ```tcl
 innovus
 
@@ -4047,7 +4046,7 @@ innovus 15>
 ```
 
 
-### Step 6: GDS 생성 🎉
+###### Step 6: GDS 생성 🎉
 
 ```tcl
 innovus
@@ -4362,7 +4361,7 @@ innovus 20>
 c
 ```
 
-📊 최종 파일 확인
+##### 📊 최종 파일 확인
 ```csh
 # GDS 파일
 ls -lh ~/JSilicon2/results/gds/tt_um_Jsilicon.gds
@@ -4392,7 +4391,7 @@ gzip -k ~/JSilicon2/results/gds/tt_um_Jsilicon.gds
 
 ---
 
-## 📊 예상 GDS 크기
+##### 📊 예상 GDS 크기
 ```
 정상 범위: 100KB ~ 10MB
 
@@ -4407,7 +4406,7 @@ JSilicon 예상:
 
 ---
 
-## 📁 최종 Deliverables
+##### 📁 최종 Deliverables
 ```
 필수 제출 파일:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4428,7 +4427,7 @@ JSilicon 예상:
 
 ---
 
-## ✅ Tape-out 체크리스트
+#### ✅ Tape-out 체크리스트
 ```
 최종 확인 사항:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
