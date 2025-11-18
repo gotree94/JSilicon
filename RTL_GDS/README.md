@@ -239,8 +239,9 @@ JSilicon2/
        ↓
 ┌─────────────┐
 │Verification │  ← DRC, LVS, Timing
-│  (Calibre)  │    - Physical verification
-└──────┬──────┘    - Extraction
+│  (Innovus)  │    - Physical verification
+│  (Pegasus)  │    - Extraction
+└──────┬──────┘    
        │
        ↓
 ┌─────────────┐
