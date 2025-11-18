@@ -4303,6 +4303,184 @@ ls -lh results/def/tt_um_Jsilicon.def
 cat reports/pnr/summary.rpt
 ```
 
+
+---
+
+## 📚 GDS 생성 단계별 수동 실행
+
+### Step 1: 타이밍 최적화 (필수)
+```csh
+cd ~/JSilicon2/work/pnr
+innovus
+```
+
+```tcl
+# 디자인 복원
+restoreDesign jsilicon_final.enc.dat tt_um_Jsilicon
+
+# 타이밍 최적화
+setOptMode -effort high
+setOptMode -usefulSkew true
+setOptMode -fixHoldAllowSetupTnsDegrade false
+
+optDesign -postRoute -setup
+optDesign -postRoute -hold
+optDesign -postRoute -drv
+
+# 확인
+report_timing -late -max_paths 5
+report_timing -early -max_paths 5
+
+# 저장
+saveDesign jsilicon_final_opt.enc
+
+exit
+```
+
+### Step 2: LVS 검증
+```csh
+cd ~/JSilicon2/work/pnr
+innovus -init ../../scripts/innovus/run_lvs.tcl
+
+# 결과 확인
+cat ../../results/lvs/lvs_summary.rpt
+```
+
+### Step 3: DRC 확인
+```tcl
+restoreDesign jsilicon_final_opt.enc.dat tt_um_Jsilicon
+
+file mkdir ../../reports/drc
+verifyGeometry -report ../../reports/drc/geometry_final.rpt
+
+exit
+```
+
+### Step 4: RC Extraction
+```tcl
+restoreDesign jsilicon_final_opt.enc.dat tt_um_Jsilicon
+
+file mkdir ../../results/extraction
+
+extractRC
+rcOut -spef ../../results/extraction/tt_um_Jsilicon.spef
+write_sdf -version 3.0 ../../results/extraction/tt_um_Jsilicon.sdf
+
+saveDesign jsilicon_extracted.enc
+
+exit
+```
+
+### Step 5: 최종 리포트
+```tcl
+restoreDesign jsilicon_extracted.enc.dat tt_um_Jsilicon
+
+file mkdir ../../reports/final
+
+report_timing -late > ../../reports/final/timing_summary.rpt
+report_power > ../../reports/final/power.rpt
+report_area > ../../reports/final/area.rpt
+summaryReport -outfile ../../reports/final/summary.rpt
+
+exit
+```
+
+### Step 6: GDS 생성 🎉
+
+```tcl
+restoreDesign jsilicon_extracted.enc.dat tt_um_Jsilicon
+
+file mkdir ../../results/gds
+
+# GDS 생성
+streamOut ../../results/gds/tt_um_Jsilicon.gds \
+    -mapFile ../../tech/lef/gds.map \
+    -stripes 1 \
+    -units 1000 \
+    -mode ALL
+
+exit
+```
+
+📊 최종 파일 확인
+```csh
+# GDS 파일
+ls -lh ~/JSilicon2/results/gds/tt_um_Jsilicon.gds
+
+# 예상 크기: 100KB ~ 10MB
+
+# 기타 파일
+ls -lh ~/JSilicon2/results/extraction/
+ls -lh ~/JSilicon2/reports/final/
+```
+
+---
+
+## 📁 최종 Deliverables
+```
+필수 제출 파일:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. tt_um_Jsilicon.gds          ← GDS (Layout)
+2. tt_um_Jsilicon_final.v      ← Netlist
+3. tt_um_Jsilicon.spef         ← Parasitic
+4. summary_final.rpt           ← Summary
+5. gscl45nm.lef                ← Technology
+
+보조 파일:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. timing_summary.rpt          ← Timing
+7. power.rpt                   ← Power
+8. area.rpt                    ← Area
+9. geometry_final.rpt          ← DRC
+10. connectivity_check.rpt     ← LVS
+```
+
+---
+
+## ✅ Tape-out 체크리스트
+```
+최종 확인 사항:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+□ Timing
+  □ Setup WNS > 0 ns  (또는 < -0.05ns)
+  □ Hold WNS > 0 ns   (또는 < -0.05ns)
+  
+□ Physical
+  □ DRC: 0 violations
+  □ LVS: Clean
+  □ Connectivity: OK (minor issues 허용)
+  
+□ Files
+  □ GDS 파일 생성됨
+  □ 파일 크기 정상 (>100KB)
+  
+□ Reports
+  □ 모든 리포트 생성됨
+  □ Summary 확인
+  
+□ Documentation
+  □ Pin list 준비
+  □ Design spec 준비
+```
+
+## 🎉 결과 확인
+
+```csh
+# 타이밍
+cat ~/JSilicon2/reports/final/timing_summary.rpt
+
+# Violations
+cat ~/JSilicon2/reports/final/violations.rpt
+
+# DRC
+cat ~/JSilicon2/reports/final/geometry_final.rpt
+
+# GDS 정보
+ls -lh ~/JSilicon2/results/gds/tt_um_Jsilicon.gds
+```
+
+
 ---
 
 ## 📚 참고 자료
