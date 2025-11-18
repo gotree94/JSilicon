@@ -3228,28 +3228,26 @@ fit
 
 ---
 
-################################################################################
-# JSilicon 타이밍 위반 해결 가이드
-# Timing Violation Fix Guide
-################################################################################
+### JSilicon 타이밍 위반 해결 가이드 (Timing Violation Fix Guide)
 
+* 필요한 파일
+```
 tt_um_Jsilicon_synth_optimized.sdc
 fix_timing.tcl
 ```
-========================================
-현재 상태
-========================================
+
+* 현재 상태
+```
 Setup WNS:  -0.011 ns (200MHz)
 Hold WNS:   -0.395 ns
 
 Target: Setup & Hold violations 모두 해결
+```
 
-========================================
-수정 방법 1: SDC 파일 수정
-========================================
+* 수정 방법 1: SDC 파일 수정
+   * 파일: work/synthesis/tt_um_Jsilicon_synth.sdc
 
-파일: work/synthesis/tt_um_Jsilicon_synth.sdc
-
+```
 # 현재 설정
 -------------------
 create_clock -name clk -period 5.0 [get_ports clk]         # 200MHz
@@ -3271,14 +3269,12 @@ create_clock -name clk -period 6.25 [get_ports clk]        # 160MHz
 set_clock_uncertainty 0.5 [get_clocks clk]
 set_input_delay -clock clk -max 1.0 [all_inputs]
 set_output_delay -clock clk -max 1.0 [all_outputs]
+```
 
+* 수정 방법 2: 타이밍 최적화 스크립트
+   * 파일: scripts/innovus/fix_timing.tcl (새로 생성)
 
-========================================
-수정 방법 2: 타이밍 최적화 스크립트
-========================================
-
-파일: scripts/innovus/fix_timing.tcl (새로 생성)
-
+```
 #!/bin/tcsh
 ################################################################################
 # 타이밍 최적화 스크립트
@@ -3362,14 +3358,11 @@ puts "  cat reports_opt/timing_summary_fixed.rpt"
 puts ""
 
 exit
+```
 
-
-========================================
-수정 방법 3: CTS 재실행
-========================================
-
-파일: scripts/innovus/run_cts.tcl (새로 생성)
-
+* 수정 방법 3: CTS 재실행
+   * 파일: scripts/innovus/run_cts.tcl (새로 생성)
+```
 #!/bin/tcsh
 ################################################################################
 # Clock Tree Synthesis 스크립트
@@ -3463,14 +3456,11 @@ puts "=========================================="
 
 # 다음 단계 계속 (Routing)
 source ../../scripts/innovus/continue_pnr.tcl
+```
 
-
-========================================
-수정 방법 4: 전체 플로우 재실행
-========================================
-
-파일: scripts/innovus/pnr_flow_optimized.tcl
-
+* 수정 방법 4: 전체 플로우 재실행
+   * 파일: scripts/innovus/pnr_flow_optimized.tcl
+```
 기존 pnr_flow.tcl 수정 사항:
 
 1) SDC 파일 경로를 새로운 파일로 변경
@@ -3519,82 +3509,70 @@ optDesign -postRoute -hold
 
 # 추가 최적화
 optDesign -postRoute -drv
+```
 
-
-========================================
-실행 순서
-========================================
-
-방법 A: 빠른 수정 (기존 결과 활용)
+* 실행 순서
+  * 방법 A: 빠른 수정 (기존 결과 활용)
 -------------------
 1. SDC 파일 수정
-   cd ~/JSilicon2/work/synthesis
-   vi tt_um_Jsilicon_synth.sdc
-   # 클럭 주기: 5.0 → 6.67 (150MHz)
-   # 입력 지연: 1.5 → 1.0
+   * cd ~/JSilicon2/work/synthesis
+   * vi tt_um_Jsilicon_synth.sdc
+   * # 클럭 주기: 5.0 → 6.67 (150MHz)
+   * # 입력 지연: 1.5 → 1.0
 
 2. 타이밍 최적화 실행
-   cd ~/JSilicon2/work/pnr
-   innovus -init ../../scripts/innovus/fix_timing.tcl
+   * cd ~/JSilicon2/work/pnr
+   * innovus -init ../../scripts/innovus/fix_timing.tcl
 
 
-방법 B: CTS 재실행
+* 방법 B: CTS 재실행
 -------------------
-1. SDC 파일 수정 (위와 동일)
+  * 1. SDC 파일 수정 (위와 동일)
 
-2. CTS 재실행
-   cd ~/JSilicon2/work/pnr
-   innovus -init ../../scripts/innovus/run_cts.tcl
+  * 2. CTS 재실행
+   * cd ~/JSilicon2/work/pnr
+   * innovus -init ../../scripts/innovus/run_cts.tcl
 
 
-방법 C: 전체 재실행 (가장 확실)
+* 방법 C: 전체 재실행 (가장 확실)
 -------------------
-1. 새로운 SDC 파일 생성
-   cp work/synthesis/tt_um_Jsilicon_synth.sdc \
-      work/synthesis/tt_um_Jsilicon_synth_optimized.sdc
+* 1. 새로운 SDC 파일 생성
+   * cp work/synthesis/tt_um_Jsilicon_synth.sdc \
+      * work/synthesis/tt_um_Jsilicon_synth_optimized.sdc
    
-   vi work/synthesis/tt_um_Jsilicon_synth_optimized.sdc
-   # 수정 적용
+   * vi work/synthesis/tt_um_Jsilicon_synth_optimized.sdc
+   * # 수정 적용
 
-2. Synthesis 재실행
-   cd ~/JSilicon2/work/synthesis
-   genus -f ../../scripts/genus/synthesis.tcl
+* 2. Synthesis 재실행
+   * cd ~/JSilicon2/work/synthesis
+   * genus -f ../../scripts/genus/synthesis.tcl
 
-3. P&R 재실행
-   cd ~/JSilicon2/work/pnr
-   innovus -init ../../scripts/innovus/pnr_flow_optimized.tcl
+* 3. P&R 재실행
+   * cd ~/JSilicon2/work/pnr
+   * innovus -init ../../scripts/innovus/pnr_flow_optimized.tcl
 
+* 예상 결과
 
-========================================
-예상 결과
-========================================
+* 수정 전:
+  * Setup WNS: -0.011 ns @ 200MHz
+  * Hold WNS:  -0.395 ns
 
-수정 전:
-  Setup WNS: -0.011 ns @ 200MHz
-  Hold WNS:  -0.395 ns
-
-수정 후 (150MHz + CTS):
-  Setup WNS: +0.5 ~ +1.0 ns (여유 확보)
-  Hold WNS:  +0.1 ~ +0.2 ns (Pass)
+* 수정 후 (150MHz + CTS):
+  * Setup WNS: +0.5 ~ +1.0 ns (여유 확보)
+  * Hold WNS:  +0.1 ~ +0.2 ns (Pass)
 
 
-========================================
-확인 방법
-========================================
+* 확인 방법
 
-# 타이밍 확인
-cat reports_opt/timing_summary_fixed.rpt
+* # 타이밍 확인
+* cat reports_opt/timing_summary_fixed.rpt
 
-# WNS 추출
-grep -i "slack" reports_opt/timing_summary_fixed.rpt
+* # WNS 추출
+* grep -i "slack" reports_opt/timing_summary_fixed.rpt
 
-# 상세 경로
-less reports_opt/timing_setup_fixed.rpt
-less reports_opt/timing_hold_fixed.rpt
-
-
-========================================
-```
+* # 상세 경로
+* less reports_opt/timing_setup_fixed.rpt
+* less reports_opt/timing_hold_fixed.rpt
 
 ---
 
