@@ -2336,9 +2336,13 @@ fit
 ```
 
 <img width="1032" height="897" alt="001" src="https://github.com/user-attachments/assets/82f700c2-bdd3-45c4-afac-fcb39ca6c160" />
-
-
-
+<br>
+<img width="1920" height="1080" alt="003" src="https://github.com/user-attachments/assets/a58dc74e-7208-4bc8-bd2e-96ce0ef20382" />
+<br>
+<img width="1920" height="1080" alt="004" src="https://github.com/user-attachments/assets/0f817212-d79d-481e-ab0c-996b869e6fbd" />
+<br>
+<img width="1920" height="1080" alt="005" src="https://github.com/user-attachments/assets/d665323f-2970-492e-87f1-4259925566fe" />
+<br>
 
 **실행 과정 (예상 10-15분):**
 ```
