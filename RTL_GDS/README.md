@@ -2328,6 +2328,12 @@ Next Steps:
 
 ```
 
+```
+cd ~/JSilicon2/work/pnr
+innovus
+restoreDesign jsilicon_final.enc.dat tt_um_Jsilicon
+fit
+```
 
 <img width="1032" height="897" alt="005" src="https://github.com/user-attachments/assets/4371ffde-a170-421f-b34f-3f917fc6ba07" />
 
