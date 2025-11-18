@@ -1,4 +1,4 @@
-c# JSilicon: RTL-to-GDS Design Flow Tutorial
+# JSilicon: RTL-to-GDS Design Flow Tutorial
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Technology: FreePDK45](https://img.shields.io/badge/Technology-FreePDK45-blue.svg)](https://github.com/baichen318/FreePDK45)
