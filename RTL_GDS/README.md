@@ -4522,9 +4522,6 @@ ls -lh ~/JSilicon2/results/gds/tt_um_Jsilicon.gds
 ~~# DRC~~
 ~~cat ~/JSilicon2/reports/final/geometry_final.rpt~~
 
-
-```
-
 # [Skip] JSilicon 타이밍 위반 해결 가이드 (Timing Violation Fix Guide)
 
 * 필요한 파일
