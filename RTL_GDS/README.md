@@ -3224,6 +3224,376 @@ fit
 
 ---
 
+################################################################################
+# JSilicon 타이밍 위반 해결 가이드
+# Timing Violation Fix Guide
+################################################################################
+
+tt_um_Jsilicon_synth_optimized.sdc
+fix_timing.tcl
+```
+========================================
+현재 상태
+========================================
+Setup WNS:  -0.011 ns (200MHz)
+Hold WNS:   -0.395 ns
+
+Target: Setup & Hold violations 모두 해결
+
+========================================
+수정 방법 1: SDC 파일 수정
+========================================
+
+파일: work/synthesis/tt_um_Jsilicon_synth.sdc
+
+# 현재 설정
+-------------------
+create_clock -name clk -period 5.0 [get_ports clk]         # 200MHz
+set_clock_uncertainty 0.5 [get_clocks clk]
+set_input_delay -clock clk -max 1.5 [all_inputs]          # 1.5ns
+
+
+# 수정 후 (옵션 A: 150MHz)
+-------------------
+create_clock -name clk -period 6.67 [get_ports clk]        # 150MHz
+set_clock_uncertainty 0.5 [get_clocks clk]
+set_input_delay -clock clk -max 1.0 [all_inputs]          # 1.0ns
+set_output_delay -clock clk -max 1.0 [all_outputs]
+
+
+# 수정 후 (옵션 B: 160MHz - 더 도전적)
+-------------------
+create_clock -name clk -period 6.25 [get_ports clk]        # 160MHz
+set_clock_uncertainty 0.5 [get_clocks clk]
+set_input_delay -clock clk -max 1.0 [all_inputs]
+set_output_delay -clock clk -max 1.0 [all_outputs]
+
+
+========================================
+수정 방법 2: 타이밍 최적화 스크립트
+========================================
+
+파일: scripts/innovus/fix_timing.tcl (새로 생성)
+
+#!/bin/tcsh
+################################################################################
+# 타이밍 최적화 스크립트
+################################################################################
+
+# 1. 기존 디자인 복원
+restoreDesign jsilicon_final.enc.dat tt_um_Jsilicon
+
+puts "=========================================="
+puts "타이밍 최적화 시작"
+puts "=========================================="
+
+################################################################################
+# Setup Timing 개선
+################################################################################
+
+puts "1. Setup Timing 최적화..."
+
+# 최적화 모드 설정
+setOptMode -addInstancePrefix OPT_SETUP
+setOptMode -fixFanoutLoad true
+setOptMode -usefulSkew true
+setOptMode -effort high
+
+# Setup 최적화 실행
+optDesign -postRoute -setup -drv
+
+puts "  ✓ Setup 최적화 완료"
+
+################################################################################
+# Hold Timing 개선
+################################################################################
+
+puts "2. Hold Timing 최적화..."
+
+# Hold 최적화 모드
+setOptMode -addInstancePrefix OPT_HOLD
+setOptMode -fixHoldAllowSetupTnsDegrade false
+
+# Hold 최적화 실행
+optDesign -postRoute -hold
+
+puts "  ✓ Hold 최적화 완료"
+
+################################################################################
+# 타이밍 재확인
+################################################################################
+
+puts "3. 타이밍 재확인..."
+
+# Setup timing
+report_timing -late -max_paths 10 > reports_opt/timing_setup_fixed.rpt
+
+# Hold timing
+report_timing -early -max_paths 10 > reports_opt/timing_hold_fixed.rpt
+
+# Summary
+report_timing -late > reports_opt/timing_summary_fixed.rpt
+
+################################################################################
+# 최종 저장
+################################################################################
+
+puts "4. 최적화된 디자인 저장..."
+
+saveDesign work/pnr/jsilicon_optimized.enc
+
+# DEF 저장
+defOut -floorplan -netlist -routing results/def/tt_um_Jsilicon_optimized.def
+
+# Netlist 저장
+saveNetlist results/netlist/tt_um_Jsilicon_optimized.v
+
+puts ""
+puts "=========================================="
+puts "✓ 타이밍 최적화 완료"
+puts "=========================================="
+puts ""
+puts "결과 확인:"
+puts "  cat reports_opt/timing_summary_fixed.rpt"
+puts ""
+
+exit
+
+
+========================================
+수정 방법 3: CTS 재실행
+========================================
+
+파일: scripts/innovus/run_cts.tcl (새로 생성)
+
+#!/bin/tcsh
+################################################################################
+# Clock Tree Synthesis 스크립트
+################################################################################
+
+# 1. 기존 디자인 복원 (Placement 단계)
+restoreDesign jsilicon_placed.enc.dat tt_um_Jsilicon
+
+puts "=========================================="
+puts "Clock Tree Synthesis 재실행"
+puts "=========================================="
+
+################################################################################
+# CTS 설정
+################################################################################
+
+puts "1. CTS 설정..."
+
+# 사용할 버퍼/인버터 지정
+set_ccopt_property buffer_cells {BUFX2 BUFX4}
+set_ccopt_property inverter_cells {INVX1 INVX2 INVX4}
+
+# CTS 목표 설정
+set_ccopt_property target_max_trans 0.2
+set_ccopt_property target_skew 0.1
+
+puts "  ✓ CTS 설정 완료"
+
+################################################################################
+# CTS 실행
+################################################################################
+
+puts "2. CTS 실행..."
+
+# Clock tree spec 생성
+create_ccopt_clock_tree_spec -immediate
+
+# CTS 실행
+catch {
+    ccopt_design
+} result
+
+if { $result == 0 } {
+    puts "  ✓ CTS 성공"
+} else {
+    puts "  ⚠ CTS 실패 - clock_opt_design으로 재시도"
+    
+    # 대안: clock_opt_design 사용
+    clock_opt_design
+}
+
+################################################################################
+# Post-CTS 최적화
+################################################################################
+
+puts "3. Post-CTS 최적화..."
+
+# 최적화 모드 설정
+setOptMode -addInstancePrefix OPT_CTS
+setOptMode -effort high
+
+# Post-CTS 최적화
+optDesign -postCTS
+
+puts "  ✓ Post-CTS 최적화 완료"
+
+################################################################################
+# Hold Timing 수정
+################################################################################
+
+puts "4. Hold Timing 수정..."
+
+# Hold 최적화
+setOptMode -fixHoldAllowSetupTnsDegrade false
+optDesign -postCTS -hold
+
+puts "  ✓ Hold 최적화 완료"
+
+################################################################################
+# 저장
+################################################################################
+
+puts "5. CTS 결과 저장..."
+
+saveDesign work/pnr/jsilicon_cts_fixed.enc
+
+puts ""
+puts "=========================================="
+puts "✓ CTS 재실행 완료"
+puts "=========================================="
+
+# 다음 단계 계속 (Routing)
+source ../../scripts/innovus/continue_pnr.tcl
+
+
+========================================
+수정 방법 4: 전체 플로우 재실행
+========================================
+
+파일: scripts/innovus/pnr_flow_optimized.tcl
+
+기존 pnr_flow.tcl 수정 사항:
+
+1) SDC 파일 경로를 새로운 파일로 변경
+-------------------
+# 기존
+set init_mmmc_file $project_root/scripts/innovus/mmmc.tcl
+
+# mmmc.tcl 내에서:
+set sdc_file $project_root/work/synthesis/tt_um_Jsilicon_synth_optimized.sdc
+
+
+2) CTS 섹션 강화
+-------------------
+# Step 5: Clock Tree Synthesis 수정
+
+puts "Step 5: Clock Tree Synthesis"
+
+# CTS 설정 강화
+set_ccopt_property buffer_cells {BUFX2 BUFX4}
+set_ccopt_property inverter_cells {INVX1 INVX2 INVX4}
+set_ccopt_property target_max_trans 0.2
+set_ccopt_property target_skew 0.1
+set_ccopt_property use_inverters true
+
+# CTS 실행
+create_ccopt_clock_tree_spec -immediate
+ccopt_design
+
+# Hold 최적화 추가
+setOptMode -fixHoldAllowSetupTnsDegrade false
+optDesign -postCTS -hold
+
+
+3) Post-Route 최적화 강화
+-------------------
+# Step 8: Post-Route Optimization 수정
+
+puts "Step 8: Post-Route Optimization"
+
+# Setup & Hold 동시 최적화
+setOptMode -effort high
+setOptMode -usefulSkew true
+
+optDesign -postRoute -setup
+optDesign -postRoute -hold
+
+# 추가 최적화
+optDesign -postRoute -drv
+
+
+========================================
+실행 순서
+========================================
+
+방법 A: 빠른 수정 (기존 결과 활용)
+-------------------
+1. SDC 파일 수정
+   cd ~/JSilicon2/work/synthesis
+   vi tt_um_Jsilicon_synth.sdc
+   # 클럭 주기: 5.0 → 6.67 (150MHz)
+   # 입력 지연: 1.5 → 1.0
+
+2. 타이밍 최적화 실행
+   cd ~/JSilicon2/work/pnr
+   innovus -init ../../scripts/innovus/fix_timing.tcl
+
+
+방법 B: CTS 재실행
+-------------------
+1. SDC 파일 수정 (위와 동일)
+
+2. CTS 재실행
+   cd ~/JSilicon2/work/pnr
+   innovus -init ../../scripts/innovus/run_cts.tcl
+
+
+방법 C: 전체 재실행 (가장 확실)
+-------------------
+1. 새로운 SDC 파일 생성
+   cp work/synthesis/tt_um_Jsilicon_synth.sdc \
+      work/synthesis/tt_um_Jsilicon_synth_optimized.sdc
+   
+   vi work/synthesis/tt_um_Jsilicon_synth_optimized.sdc
+   # 수정 적용
+
+2. Synthesis 재실행
+   cd ~/JSilicon2/work/synthesis
+   genus -f ../../scripts/genus/synthesis.tcl
+
+3. P&R 재실행
+   cd ~/JSilicon2/work/pnr
+   innovus -init ../../scripts/innovus/pnr_flow_optimized.tcl
+
+
+========================================
+예상 결과
+========================================
+
+수정 전:
+  Setup WNS: -0.011 ns @ 200MHz
+  Hold WNS:  -0.395 ns
+
+수정 후 (150MHz + CTS):
+  Setup WNS: +0.5 ~ +1.0 ns (여유 확보)
+  Hold WNS:  +0.1 ~ +0.2 ns (Pass)
+
+
+========================================
+확인 방법
+========================================
+
+# 타이밍 확인
+cat reports_opt/timing_summary_fixed.rpt
+
+# WNS 추출
+grep -i "slack" reports_opt/timing_summary_fixed.rpt
+
+# 상세 경로
+less reports_opt/timing_setup_fixed.rpt
+less reports_opt/timing_hold_fixed.rpt
+
+
+========================================
+```
+
+---
+
 ## 📈 다음 단계
 
 1. **타이밍 최적화**
