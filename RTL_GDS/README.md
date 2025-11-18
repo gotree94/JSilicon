@@ -4503,14 +4503,26 @@ JSilicon 예상:
 # 타이밍
 cat ~/JSilicon2/reports/final/timing_summary.rpt
 
-# Violations
-cat ~/JSilicon2/reports/final/violations.rpt
+# 전력
+cat ~/JSilicon2/reports/final/power.rpt
 
-# DRC
-cat ~/JSilicon2/reports/final/geometry_final.rpt
+# 면적
+cat ~/JSilicon2/reports/final/area.rpt
+
+# 요약
+cat ~/JSilicon2/reports/final/summary.rpt
 
 # GDS 정보
 ls -lh ~/JSilicon2/results/gds/tt_um_Jsilicon.gds
+```
+
+~~# Violations~~
+~~cat ~/JSilicon2/reports/final/violations.rpt~~
+
+~~# DRC~~
+~~cat ~/JSilicon2/reports/final/geometry_final.rpt~~
+
+
 ```
 
 # [Skip] JSilicon 타이밍 위반 해결 가이드 (Timing Violation Fix Guide)
