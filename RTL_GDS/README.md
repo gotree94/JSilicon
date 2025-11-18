@@ -1153,7 +1153,7 @@ cd ~/JSilicon2/constraints
 vi jsilicon.sdc
 ```
 
-* # SDC (Synopsys Design Constraints) 파일 생성 : Cadence도 동일함
+## 📖 SDC (Synopsys Design Constraints) 파일 생성 : Cadence도 동일함
 
 ```csh
 ###############################################################################
