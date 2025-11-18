@@ -24,8 +24,6 @@
 
 **JSilicon**은 **RTL-to-GDS (Register Transfer Level to Graphic Data System)** 디지털 IC 설계 플로우를 직접 경험할 수 있도록 만든 교육용 프로세서 프로젝트입니다.
 
-### 왜 JSilicon인가?
-
 - ✅ **실무 도구 사용**: Cadence Genus, Innovus 등 실제 산업에서 사용하는 EDA 툴 경험
 - ✅ **완전한 플로우**: RTL 작성부터 최종 Layout까지 전체 과정 학습
 - ✅ **오픈소스 PDK**: FreePDK45를 사용하여 누구나 접근 가능
