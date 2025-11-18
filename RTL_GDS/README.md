@@ -3938,74 +3938,65 @@ puts "=========================================="
 exit
 ```
 
-========================================
-한번에 실행하기
-========================================
+* 한번에 실행하기
+
 ```
 cd ~/JSilicon2/work/pnr
 innovus -init ../../scripts/innovus/complete_flow.tcl |& tee complete_flow.log
 ```
 
-========================================
-체크리스트
-========================================
+* 체크리스트
 
-□ Step 1: 타이밍 최적화 완료
-  파일: jsilicon_final_opt.enc.dat
-  리포트: reports/pnr_optimized/timing_opt.rpt
+* □ Step 1: 타이밍 최적화 완료
+  * 파일: jsilicon_final_opt.enc.dat
+  * 리포트: reports/pnr_optimized/timing_opt.rpt
   
-□ Step 2: CTS (필요시만)
-  파일: jsilicon_cts_new.enc.dat
+* □ Step 2: CTS (필요시만)
+  * 파일: jsilicon_cts_new.enc.dat
   
-□ Step 3: LVS 검증 완료
-  리포트: results/lvs/lvs_summary.rpt
-  Status: Clean or Minor issues
+* □ Step 3: LVS 검증 완료
+  * 리포트: results/lvs/lvs_summary.rpt
+  * Status: Clean or Minor issues
   
-□ Step 4: RC Extraction 완료
-  파일: results/extraction/tt_um_Jsilicon.spef
-  파일: results/extraction/tt_um_Jsilicon.sdf
+* □ Step 4: RC Extraction 완료
+  * 파일: results/extraction/tt_um_Jsilicon.spef
+  * 파일: results/extraction/tt_um_Jsilicon.sdf
   
-□ Step 5: Post-layout Simulation (선택)
-  결과: 타이밍 검증 완료
+* □ Step 5: Post-layout Simulation (선택)
+  * 결과: 타이밍 검증 완료
   
-□ Step 6: GDS 생성 완료
-  파일: results/gds/tt_um_Jsilicon.gds
-  크기: ~500KB - 5MB
+* □ Step 6: GDS 생성 완료
+  * 파일: results/gds/tt_um_Jsilicon.gds
+  * 크기: ~500KB - 5MB
   
-□ 최종 검증
-  DRC: Clean ✓
-  LVS: Clean ✓
-  Timing: Met ✓
+* □ 최종 검증
+  * DRC: Clean ✓
+  * LVS: Clean ✓
+  * Timing: Met ✓
   
 
-========================================
-각 단계별 예상 시간
-========================================
+* 각 단계별 예상 시간
 
-Step 1 (타이밍 최적화):     5-15분
-Step 2 (CTS 재실행):       10-20분 (필요시만)
-Step 3 (LVS):              2-5분
-Step 4 (RC Extraction):    5-10분
-Step 5 (Simulation):       10-30분 (선택)
-Step 6 (GDS):              1-3분
+* Step 1 (타이밍 최적화):     5-15분
+* Step 2 (CTS 재실행):       10-20분 (필요시만)
+* Step 3 (LVS):              2-5분
+* Step 4 (RC Extraction):    5-10분
+* Step 5 (Simulation):       10-30분 (선택)
+* Step 6 (GDS):              1-3분
 
-전체 소요 시간: 약 25-45분 (CTS 제외)
+* 전체 소요 시간: 약 25-45분 (CTS 제외)
 
 
-========================================
-파일 크기 예상
-========================================
+* 파일 크기 예상
 
-jsilicon_final_opt.enc.dat     ~50-200MB
-tt_um_Jsilicon.spef            ~500KB-2MB
-tt_um_Jsilicon.sdf             ~200KB-1MB
-tt_um_Jsilicon.gds             ~500KB-5MB
-layout_extracted.sp            ~100KB-500KB
+* jsilicon_final_opt.enc.dat     ~50-200MB
+* tt_um_Jsilicon.spef            ~500KB-2MB
+* tt_um_Jsilicon.sdf             ~200KB-1MB
+* tt_um_Jsilicon.gds             ~500KB-5MB
+* layout_extracted.sp            ~100KB-500KB
 
 
-========================================
-주의사항
-========================================
+* 주의사항
 
 1. 디스크 공간 확인
    df -h ~/JSilicon2
@@ -4022,9 +4013,6 @@ layout_extracted.sp            ~100KB-500KB
 4. Backup
    중요한 checkpoint는 백업
    cp jsilicon_final_opt.enc.dat jsilicon_final_opt.backup.enc.dat
-
-
-========================================
 
 ---
 
