@@ -1822,104 +1822,104 @@ puts ""
 vi innovus/pnr_flow.tcl
 ```
 
-```
-###############################################################################
-# Innovus P&R Flow for JSilicon
-###############################################################################
 
-puts "========================================="
-puts "JSilicon P&R Flow - FreePDK45"
-puts "========================================="
-puts ""
+~~###############################################################################~~
+~~# Innovus P&R Flow for JSilicon~~
+~~###############################################################################~~
 
-# Project paths
-set project_root [file normalize ../../]
-set init_mmmc_file $project_root/scripts/innovus/mmmc.tcl
-set init_lef_file $project_root/tech/lef/gscl45nm.lef
-set init_verilog $project_root/results/netlist/tt_um_Jsilicon_synth.v
-set init_top_cell tt_um_Jsilicon
+~~puts "========================================="~~
+~~puts "JSilicon P&R Flow - FreePDK45"~~
+~~puts "========================================="~~
+~~puts ""~~
 
-puts "Initializing design..."
-init_design
+~~# Project paths~~
+~~set project_root [file normalize ../../]~~
+~~set init_mmmc_file $project_root/scripts/innovus/mmmc.tcl~~
+~~set init_lef_file $project_root/tech/lef/gscl45nm.lef~~
+~~set init_verilog $project_root/results/netlist/tt_um_Jsilicon_synth.v~~
+~~set init_top_cell tt_um_Jsilicon~~
 
-# Floorplan
-puts "========================================="
-puts "Step 1: Floorplan"
-puts "========================================="
-floorPlan -r 1.0 0.70 10.0 10.0 10.0 10.0
+~~puts "Initializing design..."~~
+~~init_design~~
 
-puts "Floorplan created"
-puts "  Die area: [dbGet top.fPlan.box]"
-puts ""
+~~# Floorplan~~
+~~puts "========================================="~~
+~~puts "Step 1: Floorplan"~~
+~~puts "========================================="~~
+~~floorPlan -r 1.0 0.70 10.0 10.0 10.0 10.0~~
 
-# Power planning
-puts "========================================="
-puts "Step 2: Power Planning"
-puts "========================================="
-catch {addRing -nets {VDD VSS} -width 2.0 -spacing 1.0 -layer metal1}
+~~puts "Floorplan created"~~
+~~puts "  Die area: [dbGet top.fPlan.box]"~~
+~~puts ""~~
 
-# Placement
-puts "========================================="
-puts "Step 3: Placement"
-puts "========================================="
-place_design
+~~# Power planning~~
+~~puts "========================================="~~
+~~puts "Step 2: Power Planning"~~
+~~puts "========================================="~~
+~~catch {addRing -nets {VDD VSS} -width 2.0 -spacing 1.0 -layer metal1}~~
 
-saveDesign $project_root/work/pnr/jsilicon_placed.enc
+~~# Placement~~
+~~puts "========================================="~~
+~~puts "Step 3: Placement"~~
+~~puts "========================================="~~
+~~place_design~~
 
-# Pre-CTS optimization
-optDesign -preCTS
+~~saveDesign $project_root/work/pnr/jsilicon_placed.enc~~
 
-# CTS
-puts "========================================="
-puts "Step 4: Clock Tree Synthesis"
-puts "========================================="
-create_ccopt_clock_tree_spec
-ccopt_design
+~~# Pre-CTS optimization~~
+~~optDesign -preCTS~~
 
-saveDesign $project_root/work/pnr/jsilicon_cts.enc
+~~# CTS~~
+~~puts "========================================="~~
+~~puts "Step 4: Clock Tree Synthesis"~~
+~~puts "========================================="~~
+~~create_ccopt_clock_tree_spec~~
+~~ccopt_design~~
 
-# Post-CTS optimization
-optDesign -postCTS
+~~saveDesign $project_root/work/pnr/jsilicon_cts.enc~~
 
-# Routing
-puts "========================================="
-puts "Step 5: Routing"
-puts "========================================="
-routeDesign
+~~# Post-CTS optimization~~
+~~optDesign -postCTS~~
 
-# Post-route optimization
-puts "========================================="
-puts "Step 6: Post-Route Optimization"
-puts "========================================="
-optDesign -postRoute
+~~# Routing~~
+~~puts "========================================="~~
+~~puts "Step 5: Routing"~~
+~~puts "========================================="~~
+~~routeDesign~~
 
-# Reports
-puts "========================================="
-puts "Generating Reports"
-puts "========================================="
+~~# Post-route optimization~~
+~~puts "========================================="~~
+~~puts "Step 6: Post-Route Optimization"~~
+~~puts "========================================="~~
+~~optDesign -postRoute~~
 
-set report_dir $project_root/reports/pnr
-file mkdir $report_dir
+~~# Reports~~
+~~puts "========================================="~~
+~~puts "Generating Reports"~~
+~~puts "========================================="~~
 
-report_timing -max_paths 10 > $report_dir/timing_final.rpt
-report_power > $report_dir/power_final.rpt
-report_area > $report_dir/area_final.rpt
-summaryReport -outfile $report_dir/summary.rpt
+~~set report_dir $project_root/reports/pnr~~
+~~file mkdir $report_dir~~
 
-# Write outputs
-set result_dir $project_root/results
-defOut -floorplan -netlist -routing $result_dir/def/tt_um_Jsilicon.def
-saveNetlist $result_dir/netlist/tt_um_Jsilicon_final.v
-saveDesign $project_root/work/pnr/jsilicon_final.enc
+~~report_timing -max_paths 10 > $report_dir/timing_final.rpt~~
+~~report_power > $report_dir/power_final.rpt~~
+~~report_area > $report_dir/area_final.rpt~~
+~~summaryReport -outfile $report_dir/summary.rpt~~
 
-puts ""
-puts "========================================="
-puts "P&R COMPLETE!"
-puts "========================================="
-puts ""
+~~# Write outputs~~
+~~set result_dir $project_root/results~~
+~~defOut -floorplan -netlist -routing $result_dir/def/tt_um_Jsilicon.def~~
+~~saveNetlist $result_dir/netlist/tt_um_Jsilicon_final.v~~
+~~saveDesign $project_root/work/pnr/jsilicon_final.enc~~
 
-exit
-```
+~~puts ""~~
+~~puts "========================================="~~
+~~puts "P&R COMPLETE!"~~
+~~puts "========================================="~~
+~~puts ""~~
+
+~~exit~~
+
 
 ### Final (scripts/innovus/pnr_flow.tcl)
 
