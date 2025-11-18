@@ -2335,7 +2335,8 @@ restoreDesign jsilicon_final.enc.dat tt_um_Jsilicon
 fit
 ```
 
-<img width="1032" height="897" alt="005" src="https://github.com/user-attachments/assets/4371ffde-a170-421f-b34f-3f917fc6ba07" />
+<img width="1032" height="897" alt="001" src="https://github.com/user-attachments/assets/82f700c2-bdd3-45c4-afac-fcb39ca6c160" />
+
 
 
 
