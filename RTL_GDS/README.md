@@ -3517,13 +3517,12 @@ optDesign -postRoute -drv
 1. SDC 파일 수정
    * cd ~/JSilicon2/work/synthesis
    * vi tt_um_Jsilicon_synth.sdc
-   * # 클럭 주기: 5.0 → 6.67 (150MHz)
-   * # 입력 지연: 1.5 → 1.0
+   * 클럭 주기: 5.0 → 6.67 (150MHz)
+   * 입력 지연: 1.5 → 1.0
 
 2. 타이밍 최적화 실행
    * cd ~/JSilicon2/work/pnr
    * innovus -init ../../scripts/innovus/fix_timing.tcl
-
 
 * 방법 B: CTS 재실행
 -------------------
@@ -3541,7 +3540,7 @@ optDesign -postRoute -drv
       * work/synthesis/tt_um_Jsilicon_synth_optimized.sdc
    
    * vi work/synthesis/tt_um_Jsilicon_synth_optimized.sdc
-   * # 수정 적용
+   * 수정 적용
 
 * 2. Synthesis 재실행
    * cd ~/JSilicon2/work/synthesis
