@@ -1710,42 +1710,42 @@ mkdir -p innovus
 vi innovus/mmmc.tcl
 ```
 
-```
-###############################################################################
-# MMMC Setup for JSilicon
-###############################################################################
 
-set project_root [file normalize ../../]
-set tech_lib $project_root/tech/lib/gscl45nm.lib
-set sdc_file $project_root/work/synthesis/tt_um_Jsilicon_synth.sdc
+~~###############################################################################~~
+~~# MMMC Setup for JSilicon~~
+~~###############################################################################~~
 
-# Library set
-create_library_set -name LIB_TYPICAL \
-    -timing $tech_lib
+~~set project_root [file normalize ../../]~~
+~~set tech_lib $project_root/tech/lib/gscl45nm.lib~~
+~~set sdc_file $project_root/work/synthesis/tt_um_Jsilicon_synth.sdc~~
 
-# RC corner
-create_rc_corner -name RC_TYPICAL \
-    -temperature 27
+~~# Library set~~
+~~create_library_set -name LIB_TYPICAL \~~
+~~    -timing $tech_lib~~
 
-# Delay corner
-create_delay_corner -name DELAY_TYPICAL \
-    -library_set LIB_TYPICAL \
-    -rc_corner RC_TYPICAL
+~~# RC corner~~
+~~create_rc_corner -name RC_TYPICAL \~~
+~~    -temperature 27~~
 
-# Constraint mode
-create_constraint_mode -name CONSTRAINTS \
-    -sdc_files $sdc_file
+~~# Delay corner~~
+~~create_delay_corner -name DELAY_TYPICAL \~~
+~~    -library_set LIB_TYPICAL \~~
+~~    -rc_corner RC_TYPICAL~~
 
-# Analysis view
-create_analysis_view -name VIEW_TYPICAL \
-    -constraint_mode CONSTRAINTS \
-    -delay_corner DELAY_TYPICAL
+~~# Constraint mode~~
+~~create_constraint_mode -name CONSTRAINTS \~~
+~~    -sdc_files $sdc_file~~
 
-# Set analysis view
-set_analysis_view -setup VIEW_TYPICAL -hold VIEW_TYPICAL
+~~# Analysis view~~
+~~create_analysis_view -name VIEW_TYPICAL \~~
+~~    -constraint_mode CONSTRAINTS \~~
+~~    -delay_corner DELAY_TYPICAL~~
 
-puts "MMMC setup complete"
-```
+~~# Set analysis view~~
+~~set_analysis_view -setup VIEW_TYPICAL -hold VIEW_TYPICAL~~
+
+~~puts "MMMC setup complete"~~
+
 
 ## Final
 
