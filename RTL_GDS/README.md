@@ -3621,7 +3621,7 @@ less reports_opt/timing_hold_fixed.rpt
    streamOut final.gds -mapFile gds.map -merge
    ```
 
-
+```
 ################################################################################
 # JSilicon 최종 검증 및 GDS 생성 플로우
 # Complete Verification and Tape-out Flow
@@ -3630,8 +3630,10 @@ less reports_opt/timing_hold_fixed.rpt
 ========================================
 작업 디렉토리 및 순서
 ========================================
+```
 
-모든 작업은 다음 디렉토리에서 수행:
+* 모든 작업은 다음 디렉토리에서 수행:
+```
   ~/JSilicon2/work/pnr
 
 기본 구조:
@@ -3652,8 +3654,9 @@ less reports_opt/timing_hold_fixed.rpt
   └── tech/
       └── lef/
           └── gds.map
+```
 
-
+```
 ========================================
 STEP 1: 타이밍 최적화
 ========================================
@@ -3696,8 +3699,8 @@ saveDesign jsilicon_final_opt.enc
 report_timing -late > ../../reports/pnr_optimized/timing_opt.rpt
 
 exit
-
-
+```
+```
 ========================================
 STEP 2: Clock Tree Synthesis (재실행)
 ========================================
@@ -3740,8 +3743,8 @@ optDesign -postRoute
 saveDesign jsilicon_final_cts.enc
 
 exit
-
-
+```
+```
 ========================================
 STEP 3: LVS (Layout vs Schematic)
 ========================================
@@ -3783,8 +3786,8 @@ verifyConnectivity -type special \
     -report ../../results/lvs/pg_connectivity.rpt
 
 exit
-
-
+```
+```
 ========================================
 STEP 4: Parasitic Extraction
 ========================================
@@ -3816,11 +3819,12 @@ write_sdf -version 3.0 \
 saveDesign jsilicon_extracted.enc
 
 exit
-
+```
 # SPEF 파일 확인
+```
 ls -lh ../../results/extraction/
-
-
+```
+```
 ========================================
 STEP 5: Post-Layout Simulation (선택)
 ========================================
@@ -3851,8 +3855,8 @@ vcs -full64 \
 
 # 파형 확인
 dve -vpd vcdplus.vpd &
-
-
+```
+```
 ========================================
 STEP 6: GDS 생성 (Tape-out)
 ========================================
@@ -3889,8 +3893,8 @@ exit
 # GDS 파일 확인
 ls -lh ../../results/gds/
 file ../../results/gds/tt_um_Jsilicon.gds
-
-
+```
+```
 ========================================
 전체 플로우 실행 스크립트
 ========================================
@@ -3950,15 +3954,15 @@ puts "  SDF:  results/extraction/tt_um_Jsilicon.sdf"
 puts "=========================================="
 
 exit
-
+```
 
 ========================================
 한번에 실행하기
 ========================================
-
+```
 cd ~/JSilicon2/work/pnr
 innovus -init ../../scripts/innovus/complete_flow.tcl |& tee complete_flow.log
-
+```
 
 ========================================
 체크리스트
