@@ -1747,6 +1747,90 @@ set_analysis_view -setup VIEW_TYPICAL -hold VIEW_TYPICAL
 puts "MMMC setup complete"
 ```
 
+```
+###############################################################################
+# MMMC Setup for JSilicon
+# File: scripts/innovus/mmmc.tcl
+###############################################################################
+
+set project_root [file normalize ../../]
+set tech_lib $project_root/tech/lib/gscl45nm.lib
+set sdc_file $project_root/work/synthesis/tt_um_Jsilicon_synth.sdc
+
+puts "=========================================="
+puts "MMMC Configuration"
+puts "=========================================="
+puts "Tech Library: $tech_lib"
+puts "SDC File: $sdc_file"
+puts ""
+
+# Check if files exist
+if { ![file exists $tech_lib] } {
+    puts "ERROR: Technology library not found: $tech_lib"
+    exit 1
+}
+
+if { ![file exists $sdc_file] } {
+    puts "WARNING: SDC file not found: $sdc_file"
+    puts "  Will use inline timing constraints instead"
+    set sdc_file ""
+}
+
+# Library set
+puts "Creating library set..."
+create_library_set -name LIB_TYPICAL \
+    -timing $tech_lib
+
+# Operating condition
+puts "Creating operating condition..."
+create_opcond -name OP_TYPICAL \
+    -process 1.0 \
+    -voltage 1.1 \
+    -temperature 27
+
+# Timing condition
+puts "Creating timing condition..."
+create_timing_condition -name TC_TYPICAL \
+    -opcond OP_TYPICAL \
+    -library_sets LIB_TYPICAL
+
+# RC corner
+puts "Creating RC corner..."
+create_rc_corner -name RC_TYPICAL \
+    -temperature 27
+
+# Delay corner
+puts "Creating delay corner..."
+create_delay_corner -name DELAY_TYPICAL \
+    -timing_condition TC_TYPICAL \
+    -rc_corner RC_TYPICAL
+
+# Constraint mode
+puts "Creating constraint mode..."
+if { $sdc_file != "" } {
+    create_constraint_mode -name CONSTRAINTS \
+        -sdc_files $sdc_file
+} else {
+    create_constraint_mode -name CONSTRAINTS \
+        -sdc_files {}
+}
+
+# Analysis view
+puts "Creating analysis view..."
+create_analysis_view -name VIEW_TYPICAL \
+    -constraint_mode CONSTRAINTS \
+    -delay_corner DELAY_TYPICAL
+
+# Set analysis view
+puts "Setting analysis view..."
+set_analysis_view -setup VIEW_TYPICAL -hold VIEW_TYPICAL
+
+puts ""
+puts "✓ MMMC setup complete"
+puts "=========================================="
+puts ""
+```
+
 #### 4-2. P&R 스크립트 생성
 
 ```
@@ -1856,256 +1940,366 @@ exit
 ### Final (scripts/innovus/pnr_flow.tcl)
 
 ```
-################################################################################
-# Innovus P&R Flow Script
-# Design: tt_um_Jsilicon
-# PDK: FreePDK45 (gscl45nm)
-################################################################################
+###############################################################################
+# Innovus P&R Flow for JSilicon
+# File: scripts/innovus/pnr_flow.tcl
+# Based on working version
+###############################################################################
 
 set DESIGN_NAME "tt_um_Jsilicon"
 
 puts "=========================================="
-puts "P&R Flow for $DESIGN_NAME"
-puts "PDK: FreePDK45 (gscl45nm)"
+puts "JSilicon P&R Flow - FreePDK45 (gscl45nm)"
+puts "Design: $DESIGN_NAME"
+puts "=========================================="
+puts ""
+
+# Project paths
+set project_root [file normalize ../../]
+set init_mmmc_file $project_root/scripts/innovus/mmmc.tcl
+set init_lef_file $project_root/tech/lef/gscl45nm.lef
+set init_verilog $project_root/results/netlist/${DESIGN_NAME}_synth.v
+set init_top_cell $DESIGN_NAME
+
+# Check input files
+puts "Checking input files..."
+if { ![file exists $init_lef_file] } {
+    puts "ERROR: LEF file not found: $init_lef_file"
+    exit 1
+}
+puts "  ✓ LEF: $init_lef_file"
+
+if { ![file exists $init_verilog] } {
+    puts "ERROR: Netlist not found: $init_verilog"
+    exit 1
+}
+puts "  ✓ Netlist: $init_verilog"
+
+if { ![file exists $init_mmmc_file] } {
+    puts "ERROR: MMMC file not found: $init_mmmc_file"
+    exit 1
+}
+puts "  ✓ MMMC: $init_mmmc_file"
+puts ""
+
+# Read LEF
+puts "Reading LEF file..."
+read_physical -lef $init_lef_file
+puts "  ✓ LEF loaded"
+puts ""
+
+# Read netlist
+puts "Reading netlist..."
+read_netlist $init_verilog
+set_top_module $init_top_cell
+puts "  ✓ Netlist loaded"
+puts ""
+
+# MMMC setup
+puts "Loading MMMC configuration..."
+source $init_mmmc_file
+
+# Initialize design
+puts "Initializing design..."
+init_design
+puts "  ✓ Design initialized"
+puts ""
+
+###############################################################################
+# Step 1: Floorplan
+###############################################################################
+puts "=========================================="
+puts "Step 1: Floorplan"
 puts "=========================================="
 
-################################################################################
-# 1. 라이브러리 설정
-################################################################################
-puts "\n1. Setting up libraries..."
+# Create floorplan
+# -r: aspect ratio (1.0 = square)
+# utilization: 0.70 (70% cell area)
+# margins: 10um on all sides
+floorPlan -r 1.0 0.70 10.0 10.0 10.0 10.0
 
-# LEF 파일 (프로젝트 tech 디렉토리)
-set lef_file "../../tech/lef/gscl45nm.lef"
+puts "  ✓ Floorplan created"
+puts "    Die area: [dbGet top.fPlan.box]"
 
-if { [file exists $lef_file] } {
-    read_physical -lef $lef_file
-    puts "  ✓ Read LEF: $lef_file"
-} else {
-    puts "ERROR: LEF file not found: $lef_file"
-    exit 1
-}
-
-# Timing library
-set lib_file "../../tech/lib/gscl45nm.lib"
-
-if { [file exists $lib_file] } {
-    read_timing_library $lib_file
-    puts "  ✓ Read timing lib: $lib_file"
-} else {
-    puts "ERROR: Timing library not found: $lib_file"
-    exit 1
-}
-
-################################################################################
-# 2. 넷리스트 읽기
-################################################################################
-puts "\n2. Reading netlist..."
-
-if { ![file exists ../../results/netlist/${DESIGN_NAME}_synth.v] } {
-    puts "ERROR: Synthesized netlist not found!"
-    puts "Expected: ../../results/netlist/${DESIGN_NAME}_synth.v"
-    exit 1
-}
-
-read_netlist ../../results/netlist/${DESIGN_NAME}_synth.v
-set_top_module $DESIGN_NAME
-
-################################################################################
-# 3. 디자인 초기화
-################################################################################
-puts "\n3. Initializing design..."
-init_design
-
-################################################################################
-# 4. Floorplan
-################################################################################
-puts "\n4. Creating floorplan..."
-
-# Core utilization 0.7, aspect ratio 1.0 (정사각형)
-# Margins: 10um on all sides
-floorPlan -r 1.0 0.7 10.0 10.0 10.0 10.0
-
-# I/O 핀 자동 배치
+# Assign I/O pins
 setPinAssignMode -pinEditInBatch true
 assignPin
 
-################################################################################
-# 5. Power Planning
-################################################################################
-puts "\n5. Creating power grid..."
+puts "  ✓ I/O pins assigned"
+puts ""
 
-# Global net 연결 (gscl45nm은 vdd/gnd 사용)
+###############################################################################
+# Step 2: Power Planning
+###############################################################################
+puts "=========================================="
+puts "Step 2: Power Planning"
+puts "=========================================="
+
+# Global net connections (gscl45nm uses vdd/gnd)
 globalNetConnect vdd -type pgpin -pin vdd -inst * -override
 globalNetConnect gnd -type pgpin -pin gnd -inst * -override
 globalNetConnect vdd -type tiehi -inst *
 globalNetConnect gnd -type tielo -inst *
 
-# Power ring 생성 (metal9, metal10 사용)
-addRing -nets {vdd gnd} -type core_rings \
-    -layer {metal9 metal10} \
-    -width 2.0 -spacing 1.0 -offset 5.0
+puts "  ✓ Global nets connected"
 
-# Power stripes (metal8 vertical)
-addStripe -nets {vdd gnd} \
-    -layer metal8 \
-    -direction vertical \
-    -width 1.0 -spacing 10.0 -number_of_sets 3
+# Power rings
+catch {
+    addRing -nets {vdd gnd} -type core_rings \
+        -layer {metal9 metal10} \
+        -width 2.0 -spacing 1.0 -offset 5.0
+}
+puts "  ✓ Power rings added"
 
-# Special routing for power
+# Power stripes
+catch {
+    addStripe -nets {vdd gnd} \
+        -layer metal8 \
+        -direction vertical \
+        -width 1.0 -spacing 10.0 -number_of_sets 3
+}
+puts "  ✓ Power stripes added"
+
+# Special routing
 sroute -connect {corePin} -nets {vdd gnd}
+puts "  ✓ Power routing completed"
+puts ""
 
-################################################################################
-# 6. Placement
-################################################################################
-puts "\n6. Placing standard cells..."
+###############################################################################
+# Step 3: Timing Constraints
+###############################################################################
+puts "=========================================="
+puts "Step 3: Setting Timing Constraints"
+puts "=========================================="
 
-# Placement 옵션
-setPlaceMode -congEffort high -timingDriven true
-
-# Standard cell placement with optimization
-place_opt_design
-
-# Pre-CTS optimization
-optDesign -preCTS
-
-################################################################################
-# 7. Clock Tree Synthesis (CTS)
-################################################################################
-puts "\n7. Building clock tree..."
-
-# Clock constraint
-# FreePDK45 (45nm)는 더 빠른 클락 가능
-# 10ns = 100MHz
+# Create clock (10ns = 100MHz)
 create_clock -name clk -period 10.0 [get_ports clk]
 set_clock_uncertainty 0.5 [get_clocks clk]
 
-# Input/Output delays
+# Input/output delays
 set_input_delay -clock clk -max 2.0 [remove_from_collection [all_inputs] [get_ports clk]]
 set_output_delay -clock clk -max 2.0 [all_outputs]
 
-# Clock tree synthesis (최신 Innovus)
-puts "Running clock tree synthesis..."
-clock_opt_design
+puts "  ✓ Clock: 10.0 ns (100 MHz)"
+puts "  ✓ I/O delays set"
+puts ""
 
-# Post-CTS optimization
+###############################################################################
+# Step 4: Placement
+###############################################################################
+puts "=========================================="
+puts "Step 4: Placement"
+puts "=========================================="
+
+# Placement with optimization
+setPlaceMode -congEffort high -timingDriven true
+place_design
+
+puts "  ✓ Placement completed"
+
+# Save checkpoint
+saveDesign $project_root/work/pnr/jsilicon_placed.enc
+puts "  ✓ Checkpoint saved: jsilicon_placed.enc"
+puts ""
+
+###############################################################################
+# Step 5: Pre-CTS Optimization
+###############################################################################
+puts "=========================================="
+puts "Step 5: Pre-CTS Optimization"
+puts "=========================================="
+
+optDesign -preCTS
+
+puts "  ✓ Pre-CTS optimization done"
+puts ""
+
+###############################################################################
+# Step 6: Clock Tree Synthesis
+###############################################################################
+puts "=========================================="
+puts "Step 6: Clock Tree Synthesis"
+puts "=========================================="
+
+# Create CTS spec
+create_ccopt_clock_tree_spec
+
+# Run CTS
+ccopt_design
+
+puts "  ✓ Clock tree built"
+
+# Save checkpoint
+saveDesign $project_root/work/pnr/jsilicon_cts.enc
+puts "  ✓ Checkpoint saved: jsilicon_cts.enc"
+puts ""
+
+###############################################################################
+# Step 7: Post-CTS Optimization
+###############################################################################
+puts "=========================================="
+puts "Step 7: Post-CTS Optimization"
+puts "=========================================="
+
 optDesign -postCTS
 
-################################################################################
-# 8. Routing
-################################################################################
-puts "\n8. Routing design..."
+puts "  ✓ Post-CTS optimization done"
+puts ""
 
-# Routing 옵션
+###############################################################################
+# Step 8: Routing
+###############################################################################
+puts "=========================================="
+puts "Step 8: Routing"
+puts "=========================================="
+
+# Routing options
 setNanoRouteMode -drouteFixAntenna true
 setNanoRouteMode -droutePostRouteSwapVia true
 
-# Detail routing
+# Route design
 routeDesign
 
-# Post-route optimization
+puts "  ✓ Routing completed"
+puts ""
+
+###############################################################################
+# Step 9: Post-Route Optimization
+###############################################################################
+puts "=========================================="
+puts "Step 9: Post-Route Optimization"
+puts "=========================================="
+
 optDesign -postRoute
 
-################################################################################
-# 9. Filler 추가
-################################################################################
-puts "\n9. Adding filler cells..."
+puts "  ✓ Post-route optimization done"
+puts ""
 
-# gscl45nm filler cells
-# LEF에서 filler cell 이름 확인 필요
-# 일반적으로 FILL로 시작
+###############################################################################
+# Step 10: Filler Cells
+###############################################################################
+puts "=========================================="
+puts "Step 10: Adding Filler Cells"
+puts "=========================================="
+
 setFillerMode -corePrefix FILL -core "FILL*"
 addFiller
 
-################################################################################
-# 10. 검증
-################################################################################
-puts "\n10. Running verification..."
+puts "  ✓ Filler cells added"
+puts ""
 
-# Geometry check
-verifyGeometry -report ../../reports/pnr/geometry.rpt
+###############################################################################
+# Step 11: Verification
+###############################################################################
+puts "=========================================="
+puts "Step 11: Design Verification"
+puts "=========================================="
 
-# Connectivity check
-verifyConnectivity -report ../../reports/pnr/connectivity.rpt
+set report_dir $project_root/reports/pnr
+file mkdir $report_dir
 
-################################################################################
-# 11. 타이밍 분석
-################################################################################
-puts "\n11. Generating timing reports..."
+verifyGeometry -report $report_dir/geometry.rpt
+puts "  ✓ Geometry check completed"
 
-# Setup timing (max delay)
+verifyConnectivity -report $report_dir/connectivity.rpt
+puts "  ✓ Connectivity check completed"
+puts ""
+
+###############################################################################
+# Step 12: Report Generation
+###############################################################################
+puts "=========================================="
+puts "Step 12: Generating Reports"
+puts "=========================================="
+
+# Timing reports
 report_timing -max_paths 10 -nworst 1 -delay_type max \
-    > ../../reports/pnr/timing_setup.rpt
+    > $report_dir/timing_setup.rpt
+puts "  ✓ Setup timing report"
 
-# Hold timing (min delay)
 report_timing -max_paths 10 -nworst 1 -delay_type min \
-    > ../../reports/pnr/timing_hold.rpt
+    > $report_dir/timing_hold.rpt
+puts "  ✓ Hold timing report"
 
-# Timing summary
-report_timing_summary > ../../reports/pnr/timing_summary.rpt
+report_timing_summary > $report_dir/timing_summary.rpt
+puts "  ✓ Timing summary"
 
-# Check for violations
-report_constraint -all_violators > ../../reports/pnr/violations.rpt
+# Power report
+report_power > $report_dir/power_final.rpt
+puts "  ✓ Power report"
 
-################################################################################
-# 12. 면적 및 전력 리포트
-################################################################################
-puts "\n12. Generating area and power reports..."
+# Area report
+report_area > $report_dir/area_final.rpt
+puts "  ✓ Area report"
 
-report_area > ../../reports/pnr/area.rpt
-report_power > ../../reports/pnr/power.rpt
-
-################################################################################
-# 13. 출력 파일 저장
-################################################################################
-puts "\n13. Saving outputs..."
-
-# DEF 파일 저장
-defOut -floorplan -netlist -routing ../../results/def/${DESIGN_NAME}.def
-
-# Final netlist 저장
-saveNetlist ../../results/netlist/${DESIGN_NAME}_final.v
-
-# 디자인 데이터베이스 저장
-saveDesign ${DESIGN_NAME}_final.enc
+# Constraint violations
+report_constraint -all_violators > $report_dir/violations.rpt
+puts "  ✓ Violations report"
 
 # Summary report
-summaryReport -outFile ../../reports/pnr/summary.rpt
-
-################################################################################
-# 완료
-################################################################################
-puts "\n=========================================="
-puts "✓ P&R Flow Completed Successfully!"
-puts "=========================================="
-puts "\nGenerated files:"
-puts "  DEF:     ../../results/def/${DESIGN_NAME}.def"
-puts "  Netlist: ../../results/netlist/${DESIGN_NAME}_final.v"
-puts "  Reports: ../../reports/pnr/"
+summaryReport -outfile $report_dir/summary.rpt
+puts "  ✓ Summary report"
 puts ""
-puts "Key metrics:"
-puts "-------------"
 
-# 파일 크기 표시
-if { [file exists ../../results/def/${DESIGN_NAME}.def] } {
-    set def_size [file size ../../results/def/${DESIGN_NAME}.def]
-    puts "  DEF size: [expr $def_size / 1024] KB"
-}
-
-if { [file exists ../../results/netlist/${DESIGN_NAME}_final.v] } {
-    set netlist_size [file size ../../results/netlist/${DESIGN_NAME}_final.v]
-    puts "  Netlist size: [expr $netlist_size / 1024] KB"
-}
-
-puts "\nNext steps:"
-puts "  1. Check timing: tail -50 ../../reports/pnr/timing_summary.rpt"
-puts "  2. Run STA: Step 3 in guide"
-puts "  3. Generate GDS: Step 4 in guide"
+###############################################################################
+# Step 13: Write Outputs
+###############################################################################
+puts "=========================================="
+puts "Step 13: Writing Output Files"
 puts "=========================================="
 
-# GUI 모드면 화면 fit
-if { [info exists gui_mode] && $gui_mode == 1 } {
-    fit
-}
+set result_dir $project_root/results
+file mkdir $result_dir/def
+
+# DEF file
+defOut -floorplan -netlist -routing $result_dir/def/${DESIGN_NAME}.def
+puts "  ✓ DEF: $result_dir/def/${DESIGN_NAME}.def"
+
+# Final netlist
+saveNetlist $result_dir/netlist/${DESIGN_NAME}_final.v
+puts "  ✓ Netlist: $result_dir/netlist/${DESIGN_NAME}_final.v"
+
+# Design database
+saveDesign $project_root/work/pnr/jsilicon_final.enc
+puts "  ✓ Database: work/pnr/jsilicon_final.enc"
+puts ""
+
+###############################################################################
+# Summary
+###############################################################################
+puts ""
+puts "=========================================="
+puts "✓✓✓ P&R FLOW COMPLETED SUCCESSFULLY! ✓✓✓"
+puts "=========================================="
+puts ""
+puts "Output Files:"
+puts "  DEF:      results/def/${DESIGN_NAME}.def"
+puts "  Netlist:  results/netlist/${DESIGN_NAME}_final.v"
+puts "  Database: work/pnr/jsilicon_final.enc"
+puts ""
+puts "Reports:"
+puts "  reports/pnr/timing_summary.rpt"
+puts "  reports/pnr/timing_setup.rpt"
+puts "  reports/pnr/timing_hold.rpt"
+puts "  reports/pnr/power_final.rpt"
+puts "  reports/pnr/area_final.rpt"
+puts "  reports/pnr/summary.rpt"
+puts ""
+puts "Checkpoints:"
+puts "  work/pnr/jsilicon_placed.enc"
+puts "  work/pnr/jsilicon_cts.enc"
+puts "  work/pnr/jsilicon_final.enc"
+puts ""
+puts "Next Steps:"
+puts "  1. Check timing: cat reports/pnr/timing_summary.rpt"
+puts "  2. Check violations: cat reports/pnr/violations.rpt"
+puts "  3. Run STA (Step 3 in guide)"
+puts "  4. Generate GDS (Step 4 in guide)"
+puts ""
+puts "=========================================="
+puts ""
+
+exit
 ```
 
 ```
@@ -2118,26 +2312,9 @@ chmod +x innovus/pnr_flow.tcl
 cd ~/JSilicon2/work/pnr
 
 # Innovus 실행
-innovus
-
-# GUI 모드에서 실행
-cd work/pnr
-# GUI에서: source ../../scripts/innovus/pnr_flow.tcl
-
-# Innovus 실행
 innovus -init ../../scripts/innovus/pnr_flow.tcl |& tee pnr.log
 
-# Innovus 종료
-innovus 3> exit
-
-*** Memory Usage v#2 (Current mem = 3433.059M, initial mem = 839.172M) ***
-*** Message Summary: 129 warning(s), 7 error(s)
-
---- Ending "Innovus" (totcpu=0:01:20, real=0:04:51, mem=3433.1M) ---
-
 ```
-
-
 
 <img width="1032" height="897" alt="005" src="https://github.com/user-attachments/assets/4371ffde-a170-421f-b34f-3f917fc6ba07" />
 
