@@ -3621,6 +3621,425 @@ less reports_opt/timing_hold_fixed.rpt
    streamOut final.gds -mapFile gds.map -merge
    ```
 
+
+################################################################################
+# JSilicon 최종 검증 및 GDS 생성 플로우
+# Complete Verification and Tape-out Flow
+################################################################################
+
+========================================
+작업 디렉토리 및 순서
+========================================
+
+모든 작업은 다음 디렉토리에서 수행:
+  ~/JSilicon2/work/pnr
+
+기본 구조:
+  ~/JSilicon2/
+  ├── work/pnr/              ← 여기서 작업!
+  │   ├── *.enc.dat          (checkpoint 파일들)
+  │   └── innovus.cmd        (명령 히스토리)
+  ├── scripts/innovus/
+  │   ├── fix_timing.tcl
+  │   ├── run_lvs.tcl
+  │   └── run_cts.tcl
+  ├── results/
+  │   ├── gds/               (최종 GDS)
+  │   ├── lvs/               (LVS 결과)
+  │   └── netlist/
+  ├── reports/
+  │   └── pnr_optimized/     (최적화 후 리포트)
+  └── tech/
+      └── lef/
+          └── gds.map
+
+
+========================================
+STEP 1: 타이밍 최적화
+========================================
+
+디렉토리: ~/JSilicon2/work/pnr
+
+방법 A: 스크립트 사용 (권장)
+-------------------
+cd ~/JSilicon2/work/pnr
+innovus -init ../../scripts/innovus/fix_timing.tcl |& tee timing_opt.log
+
+# 결과 확인
+cat ../../reports/pnr_optimized/timing_summary_fixed.rpt
+
+
+방법 B: 대화형으로 실행
+-------------------
+cd ~/JSilicon2/work/pnr
+innovus
+
+# Innovus 콘솔에서:
+restoreDesign jsilicon_final.enc.dat tt_um_Jsilicon
+
+# Setup & Hold 최적화
+setOptMode -effort high
+setOptMode -usefulSkew true
+setOptMode -fixHoldAllowSetupTnsDegrade false
+
+optDesign -postRoute -setup
+optDesign -postRoute -hold
+
+# 타이밍 확인
+report_timing -late -max_paths 5
+report_timing -early -max_paths 5
+
+# 저장
+saveDesign jsilicon_final_opt.enc
+
+# 리포트
+report_timing -late > ../../reports/pnr_optimized/timing_opt.rpt
+
+exit
+
+
+========================================
+STEP 2: Clock Tree Synthesis (재실행)
+========================================
+
+디렉토리: ~/JSilicon2/work/pnr
+
+※ 주의: 이미 CTS가 완료된 상태라면 이 단계는 SKIP 가능
+※ Hold violation이 심각하면 CTS 재실행 필요
+
+방법: Placement 단계부터 재시작
+-------------------
+cd ~/JSilicon2/work/pnr
+innovus
+
+# Placement 단계 복원
+restoreDesign jsilicon_placed.enc.dat tt_um_Jsilicon
+
+# CTS 설정
+set_ccopt_property buffer_cells {BUFX2 BUFX4}
+set_ccopt_property inverter_cells {INVX1 INVX2 INVX4}
+set_ccopt_property target_max_trans 0.2
+set_ccopt_property target_skew 0.1
+
+# CTS 실행
+create_ccopt_clock_tree_spec -immediate
+ccopt_design
+
+# Post-CTS 최적화
+optDesign -postCTS
+optDesign -postCTS -hold
+
+# 저장
+saveDesign jsilicon_cts_new.enc
+
+# 라우팅 계속
+routeDesign
+optDesign -postRoute
+
+# 최종 저장
+saveDesign jsilicon_final_cts.enc
+
+exit
+
+
+========================================
+STEP 3: LVS (Layout vs Schematic)
+========================================
+
+디렉토리: ~/JSilicon2/work/pnr
+
+방법 A: 스크립트 사용 (권장)
+-------------------
+cd ~/JSilicon2/work/pnr
+innovus -init ../../scripts/innovus/run_lvs.tcl |& tee lvs.log
+
+# 결과 확인
+cat ../../results/lvs/lvs_summary.rpt
+cat ../../results/lvs/connectivity_check.rpt
+
+
+방법 B: 대화형으로 실행
+-------------------
+cd ~/JSilicon2/work/pnr
+innovus
+
+# 최적화된 디자인 복원
+restoreDesign jsilicon_final_opt.enc.dat tt_um_Jsilicon
+
+# LVS 디렉토리 생성
+file mkdir ../../results/lvs
+
+# Layout netlist 추출
+saveNetlist -excludeLeafCell \
+    -includePhysicalInst \
+    -includePowerGround \
+    ../../results/lvs/layout_extracted.sp
+
+# Connectivity check
+verifyConnectivity -report ../../results/lvs/connectivity.rpt
+
+# P/G connectivity
+verifyConnectivity -type special \
+    -report ../../results/lvs/pg_connectivity.rpt
+
+exit
+
+
+========================================
+STEP 4: Parasitic Extraction
+========================================
+
+디렉토리: ~/JSilicon2/work/pnr
+
+방법: Innovus 내장 RC Extraction
+-------------------
+cd ~/JSilicon2/work/pnr
+innovus
+
+# 디자인 복원
+restoreDesign jsilicon_final_opt.enc.dat tt_um_Jsilicon
+
+# RC Extraction 디렉토리
+file mkdir ../../results/extraction
+
+# Extract RC parasitics
+extractRC
+
+# SPEF 파일 생성
+rcOut -spef ../../results/extraction/tt_um_Jsilicon.spef
+
+# SDF 파일 생성 (타이밍 백-어노테이션용)
+write_sdf -version 3.0 \
+    ../../results/extraction/tt_um_Jsilicon.sdf
+
+# 저장
+saveDesign jsilicon_extracted.enc
+
+exit
+
+# SPEF 파일 확인
+ls -lh ../../results/extraction/
+
+
+========================================
+STEP 5: Post-Layout Simulation (선택)
+========================================
+
+디렉토리: ~/JSilicon2/work/simulation
+
+※ 이 단계는 Verilog 시뮬레이터 필요 (VCS, NC-Verilog, ModelSim 등)
+※ SPEF를 사용한 백-어노테이션 시뮬레이션
+
+준비물:
+  1. Post-P&R netlist: results/netlist/tt_um_Jsilicon_final.v
+  2. SDF file: results/extraction/tt_um_Jsilicon.sdf
+  3. Testbench: rtl/tb/testbench.v
+
+실행 예시 (VCS):
+-------------------
+cd ~/JSilicon2/work/simulation
+
+# 컴파일
+vcs -full64 \
+    -timescale=1ns/1ps \
+    ../../results/netlist/tt_um_Jsilicon_final.v \
+    ../../rtl/tb/testbench.v \
+    -sdf max:../../results/extraction/tt_um_Jsilicon.sdf
+
+# 실행
+./simv +vcs+dumpvars
+
+# 파형 확인
+dve -vpd vcdplus.vpd &
+
+
+========================================
+STEP 6: GDS 생성 (Tape-out)
+========================================
+
+디렉토리: ~/JSilicon2/work/pnr
+
+방법: streamOut 사용
+-------------------
+cd ~/JSilicon2/work/pnr
+innovus
+
+# 최종 디자인 복원
+restoreDesign jsilicon_final_opt.enc.dat tt_um_Jsilicon
+
+# GDS 디렉토리 생성
+file mkdir ../../results/gds
+
+# GDS Map 파일 확인
+# 파일 위치: ../../tech/lef/gds.map
+
+# GDS 생성
+streamOut ../../results/gds/tt_um_Jsilicon.gds \
+    -mapFile ../../tech/lef/gds.map \
+    -stripes 1 \
+    -units 1000 \
+    -mode ALL \
+    -merge {../../tech/gds/gscl45nm_stdcells.gds}
+
+# 압축 (선택)
+gzip ../../results/gds/tt_um_Jsilicon.gds
+
+exit
+
+# GDS 파일 확인
+ls -lh ../../results/gds/
+file ../../results/gds/tt_um_Jsilicon.gds
+
+
+========================================
+전체 플로우 실행 스크립트
+========================================
+
+파일: scripts/innovus/complete_flow.tcl
+
+#!/bin/tcsh
+###############################################################################
+# 완전한 검증 및 Tape-out 플로우
+###############################################################################
+
+set DESIGN_NAME "tt_um_Jsilicon"
+set project_root [file normalize ../../]
+
+puts "=========================================="
+puts "Complete Verification & Tape-out Flow"
+puts "=========================================="
+
+# 1. 타이밍 최적화
+puts "\n1. Timing Optimization..."
+source ../../scripts/innovus/fix_timing.tcl
+
+# 2. LVS 검증
+puts "\n2. LVS Check..."
+source ../../scripts/innovus/run_lvs.tcl
+
+# 3. RC Extraction
+puts "\n3. RC Extraction..."
+restoreDesign jsilicon_final_opt.enc.dat $DESIGN_NAME
+
+file mkdir $project_root/results/extraction
+
+extractRC
+rcOut -spef $project_root/results/extraction/tt_um_Jsilicon.spef
+write_sdf -version 3.0 $project_root/results/extraction/tt_um_Jsilicon.sdf
+
+saveDesign jsilicon_extracted.enc
+
+# 4. GDS 생성
+puts "\n4. GDS Generation..."
+
+file mkdir $project_root/results/gds
+
+streamOut $project_root/results/gds/tt_um_Jsilicon.gds \
+    -mapFile $project_root/tech/lef/gds.map \
+    -stripes 1 \
+    -units 1000 \
+    -mode ALL
+
+puts "\n=========================================="
+puts "Complete Flow Finished!"
+puts "=========================================="
+puts "\nGenerated Files:"
+puts "  GDS:  results/gds/tt_um_Jsilicon.gds"
+puts "  SPEF: results/extraction/tt_um_Jsilicon.spef"
+puts "  SDF:  results/extraction/tt_um_Jsilicon.sdf"
+puts "=========================================="
+
+exit
+
+
+========================================
+한번에 실행하기
+========================================
+
+cd ~/JSilicon2/work/pnr
+innovus -init ../../scripts/innovus/complete_flow.tcl |& tee complete_flow.log
+
+
+========================================
+체크리스트
+========================================
+
+□ Step 1: 타이밍 최적화 완료
+  파일: jsilicon_final_opt.enc.dat
+  리포트: reports/pnr_optimized/timing_opt.rpt
+  
+□ Step 2: CTS (필요시만)
+  파일: jsilicon_cts_new.enc.dat
+  
+□ Step 3: LVS 검증 완료
+  리포트: results/lvs/lvs_summary.rpt
+  Status: Clean or Minor issues
+  
+□ Step 4: RC Extraction 완료
+  파일: results/extraction/tt_um_Jsilicon.spef
+  파일: results/extraction/tt_um_Jsilicon.sdf
+  
+□ Step 5: Post-layout Simulation (선택)
+  결과: 타이밍 검증 완료
+  
+□ Step 6: GDS 생성 완료
+  파일: results/gds/tt_um_Jsilicon.gds
+  크기: ~500KB - 5MB
+  
+□ 최종 검증
+  DRC: Clean ✓
+  LVS: Clean ✓
+  Timing: Met ✓
+  
+
+========================================
+각 단계별 예상 시간
+========================================
+
+Step 1 (타이밍 최적화):     5-15분
+Step 2 (CTS 재실행):       10-20분 (필요시만)
+Step 3 (LVS):              2-5분
+Step 4 (RC Extraction):    5-10분
+Step 5 (Simulation):       10-30분 (선택)
+Step 6 (GDS):              1-3분
+
+전체 소요 시간: 약 25-45분 (CTS 제외)
+
+
+========================================
+파일 크기 예상
+========================================
+
+jsilicon_final_opt.enc.dat     ~50-200MB
+tt_um_Jsilicon.spef            ~500KB-2MB
+tt_um_Jsilicon.sdf             ~200KB-1MB
+tt_um_Jsilicon.gds             ~500KB-5MB
+layout_extracted.sp            ~100KB-500KB
+
+
+========================================
+주의사항
+========================================
+
+1. 디스크 공간 확인
+   df -h ~/JSilicon2
+   최소 1GB 여유 공간 필요
+
+2. CTS는 선택적
+   - Hold violation이 크면 재실행
+   - 작으면 (< 0.5ns) 최적화만으로 충분
+
+3. GDS Map 파일 확인
+   - tech/lef/gds.map 파일 존재 확인
+   - Layer mapping이 올바른지 확인
+
+4. Backup
+   중요한 checkpoint는 백업
+   cp jsilicon_final_opt.enc.dat jsilicon_final_opt.backup.enc.dat
+
+
+========================================
+
 ---
 
 ## 📝 참고 자료
