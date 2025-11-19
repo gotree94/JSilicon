@@ -110,7 +110,7 @@ Last updated March 21, 2022
 
 
 Do you accept the license terms? [yes|no]
-[no] >>> yes <======== 입력
+[no] >>> yes 
 
 ```
 
@@ -118,7 +118,7 @@ Do you accept the license terms? [yes|no]
 
 ```
 Do you accept the license terms? [yes|no]
-[no] >>> yes
+[no] >>> yes <======== yes 입력
 
 Miniconda3 will now be installed into this location:
 /home/student018/miniconda3
@@ -127,7 +127,7 @@ Miniconda3 will now be installed into this location:
   - Press CTRL-C to abort the installation
   - Or specify a different location below
 
-[/home/student018/miniconda3] >>>
+[/home/student018/miniconda3] >>> <======== Enter 입력
 PREFIX=/home/student018/miniconda3
 Unpacking payload ...
 
@@ -144,7 +144,7 @@ Executing transaction: done
 installation finished.
 Do you wish the installer to initialize Miniconda3
 by running conda init? [yes|no]
-[no] >>> yes
+[no] >>> yes <======== yes 입력
 no change     /home/student018/miniconda3/condabin/conda
 no change     /home/student018/miniconda3/bin/conda
 no change     /home/student018/miniconda3/bin/conda-env
