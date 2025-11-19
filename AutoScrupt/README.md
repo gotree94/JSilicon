@@ -1,6 +1,7 @@
 # JSilicon Auto Script
 
 ## 사전준비
+
 ```
 vi ~/.cshrc
 ```
@@ -10,6 +11,10 @@ setenv PATH /tools/cadence/XCELIUMMAIN2409/tools/bin:${PATH}
 setenv PATH /home/student001/miniconda3/bin:${PATH}
 setenv PATH /tools/cadence/DDI231/GENUS231/bin:${PATH}
 setenv PATH /tools/cadence/DDI231/INNOVUS231/bin:${PATH}
+```
+
+```
+source ~/.cshrc
 ```
 
 ```
