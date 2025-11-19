@@ -214,6 +214,8 @@ source ~/.cshrc
 
 ```
 makedir JSilicon2
+cp AutoScrupt.tar JSilicon2
+cd JSilicon2
 tar -xvf AutoScrupt.tar
 ```
 
