@@ -6672,5 +6672,12 @@ Other End Arrival Time          0.000
 - Arrival Time                  3.090
 
 ==============================================================================
+```
 
+### innovus 확인
+
+```
+innovus
+
+restoreDesign jsilicon_final_opt.enc.dat tt_um_Jsilicon
 ```
