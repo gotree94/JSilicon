@@ -1,6 +1,13 @@
 # JSilicon Auto Script
 
-## 사전준비
+
+## 1. miniconda 설치
+
+```
+```
+
+
+## 2. 사전준비
 
 ```
 vi ~/.cshrc
