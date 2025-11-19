@@ -7410,7 +7410,9 @@ Other End Arrival Time          0.000
 ### innovus 확인
 
 ```
+cd ~/JSilicon2/work/pnr
+
 innovus
 
-restoreDesign jsilicon_final_opt.enc.dat tt_um_Jsilicon
+restoreDesign  jsilicon_final.enc.dat tt_um_Jsilicon
 ```
