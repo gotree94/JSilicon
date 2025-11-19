@@ -1,6 +1,13 @@
 # JSilicon Auto Script
 
 
+## 📚 목차 (Table of Contents)
+
+1. [Miniconda 설치](#1-miniconda-설치)  
+2. [사전준비](#2-사전준비)  
+3. [프로젝트 생성 및 Auto Script 실행](#3-프로젝트-생성-및-auto-script-실행)
+
+
 ## 1. miniconda 설치
 
 ```
@@ -203,6 +210,8 @@ setenv PATH /tools/cadence/DDI231/INNOVUS231/bin:${PATH}
 ```
 source ~/.cshrc
 ```
+
+## 3. 프로젝트 생성 및 Auto Script 실행
 
 ```
 makedir JSilicon2
