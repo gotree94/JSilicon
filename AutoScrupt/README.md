@@ -221,7 +221,18 @@ chmod +x run_rtl2gds.csh
 ./run_rtl2gds.csh
 ```
 
-* SDC에서 Constraint를 수정하려면?
+* SDC Constraing 추가 예제
+# SDC (Synopsys Design Constraints) 제약 조건 가이드
+
+## 📋 목차
+1. [타이밍 제약 (Timing Constraints)](#타이밍-제약-timing-constraints)
+2. [면적 제약 (Area Constraints)](#면적-제약-area-constraints)
+3. [전력 제약 (Power Constraints)](#전력-제약-power-constraints)
+4. [물리적 제약 (Physical Constraints)](#물리적-제약-physical-constraints)
+5. [설계 규칙 제약 (Design Rule Constraints)](#설계-규칙-제약-design-rule-constraints)
+6. [JSilicon 프로젝트 적용 예시](#jsilicon-프로젝트-적용-예시)
+
+## JSilicon에서 SDC에서 타이밍 Constraint를 수정하려면?
 
 ```
 8번 라인:
@@ -239,19 +250,6 @@ tclcreate_clock -name clk -period 5.0 [get_ports clk]
 500 MHz: period 2.0
 1 GHz: period 1.0
 ```
-
-* SDC Constraing 추가 예제
-# SDC (Synopsys Design Constraints) 제약 조건 가이드
-
-## 📋 목차
-1. [타이밍 제약 (Timing Constraints)](#타이밍-제약-timing-constraints)
-2. [면적 제약 (Area Constraints)](#면적-제약-area-constraints)
-3. [전력 제약 (Power Constraints)](#전력-제약-power-constraints)
-4. [물리적 제약 (Physical Constraints)](#물리적-제약-physical-constraints)
-5. [설계 규칙 제약 (Design Rule Constraints)](#설계-규칙-제약-design-rule-constraints)
-6. [JSilicon 프로젝트 적용 예시](#jsilicon-프로젝트-적용-예시)
-
----
 
 ## 타이밍 제약 (Timing Constraints)
 
