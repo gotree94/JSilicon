@@ -260,6 +260,71 @@ chmod +x run_rtl2gds.csh
 ```
 
 
+```
+
+[student018@gjchamber ~/JSilicon2]$ python3 create_scripts.py
+======================================================================
+ JSilicon RTL-to-GDS Script Generator
+ Improved Version
+======================================================================
+
+Step 1: Creating directory structure...
+[OK] Directory structure created
+
+Step 2: Creating SDC file...
+[OK] SDC created: constraints/jsilicon.sdc
+
+Step 3: Creating Genus script...
+[OK] Genus script created: scripts/genus/synthesis.tcl
+
+Step 4: Creating MMMC script...
+[OK] MMMC script created: scripts/innovus/mmmc.tcl
+
+Step 5: Creating P&R script...
+[OK] P&R script created: scripts/innovus/pnr_flow.tcl
+
+Step 6: Creating GDS script...
+[OK] GDS script created: scripts/innovus/generate_gds.tcl
+
+
+========================================
+Verification
+========================================
+
+[OK] SDC file: constraints/jsilicon.sdc
+[OK] Synthesis script: scripts/genus/synthesis.tcl
+[OK] MMMC script: scripts/innovus/mmmc.tcl
+[OK] P&R script: scripts/innovus/pnr_flow.tcl
+[OK] GDS script: scripts/innovus/generate_gds.tcl
+
+[OK] Liberty library: tech/lib/gscl45nm.lib
+[OK] LEF file: tech/lef/gscl45nm.lef
+
+[OK] RTL: src/alu.v
+[OK] RTL: src/fsm.v
+[OK] RTL: src/inst.v
+[OK] RTL: src/pc.v
+[OK] RTL: src/regfile.v
+[OK] RTL: src/switch.v
+[OK] RTL: src/uart.v
+[OK] RTL: src/jsilicon.v
+
+========================================
+All scripts created successfully!
+
+======================================================================
+ SETUP COMPLETE!
+======================================================================
+
+Next steps:
+  1. Ensure all tech files and RTL files are in place
+  2. Run: chmod +x run_rtl2gds.csh
+  3. Run: ./run_rtl2gds.csh
+
+[student018@gjchamber ~/JSilicon2]$
+
+```
+
 * 중간에 진행 관련 문의가 있으니 : y 입력 후 엔터
 
 ```csh
