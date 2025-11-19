@@ -240,6 +240,630 @@ tclcreate_clock -name clk -period 5.0 [get_ports clk]
 1 GHz: period 1.0
 ```
 
+* SDC Constraing 추가 예제
+# SDC (Synopsys Design Constraints) 제약 조건 가이드
+
+## 📋 목차
+1. [타이밍 제약 (Timing Constraints)](#타이밍-제약-timing-constraints)
+2. [면적 제약 (Area Constraints)](#면적-제약-area-constraints)
+3. [전력 제약 (Power Constraints)](#전력-제약-power-constraints)
+4. [물리적 제약 (Physical Constraints)](#물리적-제약-physical-constraints)
+5. [설계 규칙 제약 (Design Rule Constraints)](#설계-규칙-제약-design-rule-constraints)
+6. [JSilicon 프로젝트 적용 예시](#jsilicon-프로젝트-적용-예시)
+
+---
+
+## 타이밍 제약 (Timing Constraints)
+
+### 1. Clock 정의
+
+```tcl
+# 기본 클럭 생성 (200 MHz = 5ns period)
+create_clock -name clk -period 5.0 [get_ports clk]
+
+# 여러 클럭 정의
+create_clock -name clk_fast -period 2.0 [get_ports clk_fast]
+create_clock -name clk_slow -period 10.0 [get_ports clk_slow]
+
+# Generated clock (PLL 출력 등)
+create_generated_clock -name clk_div2 \
+    -source [get_ports clk] \
+    -divide_by 2 \
+    [get_pins divider/Q]
+```
+
+### 2. Clock Uncertainty (Jitter & Skew)
+```tcl
+# Clock uncertainty 설정 (jitter + skew 고려)
+set_clock_uncertainty 0.5 [get_clocks clk]
+
+# Setup/Hold 각각 설정
+set_clock_uncertainty -setup 0.5 [get_clocks clk]
+set_clock_uncertainty -hold 0.1 [get_clocks clk]
+```
+
+### 3. Clock Latency (지연)
+```tcl
+# Source latency (클럭 소스에서 디자인까지)
+set_clock_latency -source -min 0.5 [get_clocks clk]
+set_clock_latency -source -max 1.0 [get_clocks clk]
+
+# Network latency (클럭 트리 내부)
+set_clock_latency -min 0.2 [get_clocks clk]
+set_clock_latency -max 0.5 [get_clocks clk]
+```
+
+### 4. Input/Output Delays
+```tcl
+# Input delay (외부에서 입력 신호 도착 시간)
+set_input_delay -clock clk -max 1.5 [all_inputs]
+set_input_delay -clock clk -min 0.5 [all_inputs]
+
+# Output delay (출력 신호가 외부 디바이스에 도착해야 하는 시간)
+set_output_delay -clock clk -max 1.5 [all_outputs]
+set_output_delay -clock clk -min 0.5 [all_outputs]
+
+# 특정 포트만 설정
+set_input_delay -clock clk -max 2.0 [get_ports data_in*]
+```
+
+### 5. Clock Transition (Slew)
+```tcl
+# 클럭 신호의 transition time 제한
+set_clock_transition 0.1 [get_clocks clk]
+set_clock_transition -rise 0.1 [get_clocks clk]
+set_clock_transition -fall 0.15 [get_clocks clk]
+```
+
+### 6. False Path & Multicycle Path
+```tcl
+# False path (타이밍 체크 안함)
+set_false_path -from [get_ports rst_n]
+set_false_path -from [get_clocks clk1] -to [get_clocks clk2]
+
+# Multicycle path (여러 사이클에 걸쳐 전달)
+set_multicycle_path -setup 2 -from [get_pins reg1/Q] -to [get_pins reg2/D]
+set_multicycle_path -hold 1 -from [get_pins reg1/Q] -to [get_pins reg2/D]
+```
+
+### 7. Clock Groups
+```tcl
+# 비동기 클럭 그룹 정의
+set_clock_groups -asynchronous \
+    -group [get_clocks clk_sys] \
+    -group [get_clocks clk_usb]
+
+# 배타적 클럭 (동시에 활성화 안됨)
+set_clock_groups -physically_exclusive \
+    -group [get_clocks clk_mode1] \
+    -group [get_clocks clk_mode2]
+```
+
+---
+
+## 면적 제약 (Area Constraints)
+
+### 1. 최대 면적 제한
+```tcl
+# 전체 디자인 면적 제한 (단위: um^2)
+set_max_area 10000
+
+# 0으로 설정하면 최소 면적으로 합성
+set_max_area 0
+```
+
+### 2. Cell 인스턴스 제한
+```tcl
+# 특정 셀 사용 금지
+set_dont_use [get_lib_cells */CLKBUF*]
+set_dont_use [get_lib_cells */DELAY*]
+
+# 특정 셀만 사용
+set_dont_use [get_lib_cells */*]
+remove_attribute [get_lib_cells */NAND2*] dont_use
+remove_attribute [get_lib_cells */NOR2*] dont_use
+```
+
+### 3. Utilization (배치 밀도)
+```tcl
+# Note: SDC가 아닌 합성/P&R 툴에서 설정
+# Genus에서:
+# set_db syn_map_effort high
+# Innovus에서:
+# floorPlan -r 1.0 0.70  # 70% utilization
+```
+
+---
+
+## 전력 제약 (Power Constraints)
+
+### 1. 최대 전력 제한
+```tcl
+# 동적 전력 제한 (단위: mW)
+set_max_dynamic_power 100 mW
+
+# 누설 전력 제한
+set_max_leakage_power 10 mW
+
+# 전체 전력 제한
+set_max_total_power 110 mW
+```
+
+### 2. Clock Gating
+```tcl
+# Clock gating 활성화 (SDC가 아닌 합성 옵션)
+# Genus에서:
+# set_db lp_insert_clock_gating true
+```
+
+### 3. Multi-Vt (Threshold Voltage) 셀 사용
+```tcl
+# 특정 경로에 Low-Vt 셀 사용 (빠르지만 전력 큼)
+set_threshold_voltage_group_type -type low_vt [get_cells critical_path/*]
+
+# High-Vt 셀 사용 (느리지만 전력 작음)
+set_threshold_voltage_group_type -type high_vt [get_cells non_critical/*]
+```
+
+---
+
+## 물리적 제약 (Physical Constraints)
+
+### 1. Driving Cell (입력 구동력)
+```tcl
+# 모든 입력에 대한 구동 셀 지정
+set_driving_cell -lib_cell BUFX2 -library gscl45nm [all_inputs]
+
+# 특정 입력만 설정
+set_driving_cell -lib_cell BUFX4 -library gscl45nm [get_ports critical_input]
+```
+
+### 2. Load (출력 부하)
+```tcl
+# 출력 포트의 부하 용량 (단위: pF)
+set_load 0.05 [all_outputs]
+set_load 0.1 [get_ports high_fanout_out]
+
+# Wire load 설정
+set_load 0.02 [get_nets internal_net]
+```
+
+### 3. Input Transition
+```tcl
+# 입력 신호의 transition time
+set_input_transition 0.2 [all_inputs]
+set_input_transition -rise 0.15 [get_ports fast_input]
+set_input_transition -fall 0.25 [get_ports fast_input]
+```
+
+### 4. Port Fanout
+```tcl
+# 포트별 fanout 제한
+set_fanout_load 8 [get_ports data_out]
+```
+
+---
+
+## 설계 규칙 제약 (Design Rule Constraints)
+
+### 1. Max Transition Time
+```tcl
+# 전체 디자인의 최대 transition time
+set_max_transition 0.5 [current_design]
+
+# 특정 net/port에만 적용
+set_max_transition 0.3 [all_outputs]
+set_max_transition 0.2 [get_nets critical_net]
+```
+
+### 2. Max Fanout
+```tcl
+# 전체 디자인의 최대 fanout
+set_max_fanout 20 [current_design]
+
+# 특정 port/net에만 적용
+set_max_fanout 10 [get_ports data_in*]
+```
+
+### 3. Max Capacitance
+```tcl
+# 최대 커패시턴스 (단위: pF)
+set_max_capacitance 0.5 [all_outputs]
+set_max_capacitance 0.2 [get_ports critical_out]
+```
+
+### 4. Min Capacitance
+```tcl
+# 최소 커패시턴스 (너무 작으면 신호 integrity 문제)
+set_min_capacitance 0.01 [all_outputs]
+```
+
+### 5. Operating Conditions
+```tcl
+# PVT (Process, Voltage, Temperature) 조건
+set_operating_conditions -max WORST -max_library gscl45nm
+set_operating_conditions -min BEST -min_library gscl45nm
+
+# Typical corner
+set_operating_conditions -max TYPICAL -max_library gscl45nm
+```
+
+### 6. Wire Load Model
+```tcl
+# Wire load model 설정 (작은 디자인)
+set_wire_load_mode top
+set_wire_load_model -name small -library gscl45nm
+
+# 큰 디자인
+set_wire_load_model -name large -library gscl45nm
+```
+
+---
+
+## JSilicon 프로젝트 적용 예시
+
+### 기본 설정 (constraints/jsilicon.sdc)
+
+```tcl
+###############################################################################
+# JSilicon Timing Constraints
+# Target: 200 MHz (5ns period)
+# FreePDK45 Process (45nm)
+# Author: JSilicon Team
+# Date: 2025
+###############################################################################
+
+#==============================================================================
+# 1. CLOCK DEFINITION
+#==============================================================================
+
+# Primary clock: 200 MHz
+create_clock -name clk -period 5.0 [get_ports clk]
+
+# Clock uncertainty (jitter + skew)
+set_clock_uncertainty 0.5 [get_clocks clk]
+
+# Clock transition (slew rate)
+set_clock_transition 0.1 [get_clocks clk]
+
+# Clock latency (estimated pre-CTS)
+set_clock_latency -source -min 0.5 [get_clocks clk]
+set_clock_latency -source -max 1.0 [get_clocks clk]
+
+#==============================================================================
+# 2. INPUT/OUTPUT DELAYS
+#==============================================================================
+
+# Input delays (30% of clock period)
+set_input_delay -clock clk -max 1.5 [all_inputs]
+set_input_delay -clock clk -min 0.5 [all_inputs]
+
+# Output delays (30% of clock period)
+set_output_delay -clock clk -max 1.5 [all_outputs]
+set_output_delay -clock clk -min 0.5 [all_outputs]
+
+# Remove delays from clock and reset ports
+remove_input_delay [get_ports clk]
+remove_output_delay [get_ports clk]
+
+if { [sizeof_collection [get_ports rst_n]] > 0 } {
+    remove_input_delay [get_ports rst_n]
+}
+
+#==============================================================================
+# 3. PHYSICAL CONSTRAINTS
+#==============================================================================
+
+# Driving cell for inputs (medium strength buffer)
+set_driving_cell -lib_cell BUFX2 -library gscl45nm [all_inputs]
+
+# Load on outputs (50 fF = 0.05 pF)
+set_load 0.05 [all_outputs]
+
+# Input transition time
+set_input_transition 0.2 [all_inputs]
+
+#==============================================================================
+# 4. DESIGN RULE CONSTRAINTS
+#==============================================================================
+
+# Maximum transition time (500 ps)
+set_max_transition 0.5 [current_design]
+
+# Maximum fanout
+set_max_fanout 20 [current_design]
+
+# Maximum capacitance on outputs (500 fF)
+set_max_capacitance 0.5 [all_outputs]
+
+# Minimum capacitance (avoid signal integrity issues)
+set_min_capacitance 0.01 [all_outputs]
+
+#==============================================================================
+# 5. OPERATING CONDITIONS
+#==============================================================================
+
+# Typical corner (for 45nm process)
+set_operating_conditions -max TYPICAL -max_library gscl45nm
+
+#==============================================================================
+# 6. AREA CONSTRAINTS
+#==============================================================================
+
+# Minimize area (0 = smallest possible)
+set_max_area 0
+
+# Alternative: Set specific area limit (in um^2)
+# set_max_area 5000
+
+#==============================================================================
+# 7. POWER CONSTRAINTS (Optional)
+#==============================================================================
+
+# Maximum dynamic power (mW)
+# set_max_dynamic_power 50 mW
+
+# Maximum leakage power (mW)
+# set_max_leakage_power 5 mW
+
+#==============================================================================
+# 8. FALSE PATHS (Optional)
+#==============================================================================
+
+# Reset is asynchronous - no timing check needed
+if { [sizeof_collection [get_ports rst_n]] > 0 } {
+    set_false_path -from [get_ports rst_n]
+}
+
+# Example: Async paths between different clock domains
+# set_false_path -from [get_clocks clk1] -to [get_clocks clk2]
+
+#==============================================================================
+# 9. MULTICYCLE PATHS (Optional)
+#==============================================================================
+
+# Example: Some paths take 2 cycles
+# set_multicycle_path -setup 2 -from [get_pins reg1/Q] -to [get_pins reg2/D]
+# set_multicycle_path -hold 1 -from [get_pins reg1/Q] -to [get_pins reg2/D]
+
+#==============================================================================
+# 10. DON'T USE CELLS (Optional)
+#==============================================================================
+
+# Prevent use of certain cells (delay cells, clock buffers in signal path)
+# set_dont_use [get_lib_cells */CLKBUF*]
+# set_dont_use [get_lib_cells */DELAY*]
+
+###############################################################################
+# End of constraints
+###############################################################################
+```
+
+### 고성능 설정 (constraints/jsilicon_high_performance.sdc)
+
+```tcl
+###############################################################################
+# JSilicon High Performance Configuration
+# Target: 500 MHz (2ns period) - Aggressive timing
+###############################################################################
+
+# Clock: 500 MHz
+create_clock -name clk -period 2.0 [get_ports clk]
+
+# Tighter uncertainty for high speed
+set_clock_uncertainty 0.2 [get_clocks clk]
+set_clock_transition 0.05 [get_clocks clk]
+
+# Tighter I/O delays (20% of period)
+set_input_delay -clock clk -max 0.4 [all_inputs]
+set_input_delay -clock clk -min 0.2 [all_inputs]
+set_output_delay -clock clk -max 0.4 [all_outputs]
+set_output_delay -clock clk -min 0.2 [all_outputs]
+
+remove_input_delay [get_ports clk]
+remove_output_delay [get_ports clk]
+
+# Stronger driving cells
+set_driving_cell -lib_cell BUFX4 -library gscl45nm [all_inputs]
+set_load 0.03 [all_outputs]
+
+# Tighter design rules
+set_max_transition 0.2 [current_design]
+set_max_fanout 10 [current_design]
+set_max_capacitance 0.3 [all_outputs]
+
+# Area is secondary - prioritize speed
+# set_max_area 10000
+
+# Higher power budget for performance
+# set_max_dynamic_power 100 mW
+```
+
+### 저전력 설정 (constraints/jsilicon_low_power.sdc)
+
+```tcl
+###############################################################################
+# JSilicon Low Power Configuration
+# Target: 100 MHz (10ns period) - Power optimized
+###############################################################################
+
+# Clock: 100 MHz
+create_clock -name clk -period 10.0 [get_ports clk]
+
+# Relaxed timing for power savings
+set_clock_uncertainty 0.8 [get_clocks clk]
+set_clock_transition 0.3 [get_clocks clk]
+
+# Relaxed I/O delays (40% of period)
+set_input_delay -clock clk -max 4.0 [all_inputs]
+set_input_delay -clock clk -min 1.0 [all_inputs]
+set_output_delay -clock clk -max 4.0 [all_outputs]
+set_output_delay -clock clk -min 1.0 [all_outputs]
+
+remove_input_delay [get_ports clk]
+remove_output_delay [get_ports clk]
+
+# Weaker driving cells (lower power)
+set_driving_cell -lib_cell BUFX1 -library gscl45nm [all_inputs]
+set_load 0.05 [all_outputs]
+
+# Relaxed design rules
+set_max_transition 1.0 [current_design]
+set_max_fanout 30 [current_design]
+set_max_capacitance 1.0 [all_outputs]
+
+# Minimize area for lower leakage
+set_max_area 0
+
+# Strict power limits
+# set_max_dynamic_power 20 mW
+# set_max_leakage_power 2 mW
+```
+
+### 면적 최적화 설정 (constraints/jsilicon_area_optimized.sdc)
+
+```tcl
+###############################################################################
+# JSilicon Area Optimized Configuration
+# Target: 150 MHz (6.67ns period) - Area minimized
+###############################################################################
+
+# Clock: 150 MHz (balanced)
+create_clock -name clk -period 6.67 [get_ports clk]
+
+set_clock_uncertainty 0.6 [get_clocks clk]
+set_clock_transition 0.15 [get_clocks clk]
+
+# Standard I/O delays
+set_input_delay -clock clk -max 2.0 [all_inputs]
+set_input_delay -clock clk -min 0.5 [all_inputs]
+set_output_delay -clock clk -max 2.0 [all_outputs]
+set_output_delay -clock clk -min 0.5 [all_outputs]
+
+remove_input_delay [get_ports clk]
+remove_output_delay [get_ports clk]
+
+# Standard driving cells
+set_driving_cell -lib_cell BUFX2 -library gscl45nm [all_inputs]
+set_load 0.05 [all_outputs]
+
+# Standard design rules
+set_max_transition 0.5 [current_design]
+set_max_fanout 25 [current_design]
+set_max_capacitance 0.5 [all_outputs]
+
+# CRITICAL: Minimize area aggressively
+set_max_area 0
+
+# Allow using all available cells for area reduction
+# Don't restrict any cells unless absolutely necessary
+
+# Operating conditions
+set_operating_conditions -max TYPICAL -max_library gscl45nm
+```
+
+---
+
+## 📊 제약 조건 비교표
+
+| 항목 | 고성능 | 표준 | 저전력 | 면적최적화 |
+|------|--------|------|--------|------------|
+| **주파수** | 500 MHz | 200 MHz | 100 MHz | 150 MHz |
+| **Period** | 2.0 ns | 5.0 ns | 10.0 ns | 6.67 ns |
+| **Uncertainty** | 0.2 ns | 0.5 ns | 0.8 ns | 0.6 ns |
+| **Max Transition** | 0.2 ns | 0.5 ns | 1.0 ns | 0.5 ns |
+| **Max Fanout** | 10 | 20 | 30 | 25 |
+| **Driving Cell** | BUFX4 | BUFX2 | BUFX1 | BUFX2 |
+| **Max Area** | 10000 um² | 0 (min) | 0 (min) | 0 (min) |
+| **Power Budget** | 100 mW | - | 20 mW | - |
+| **적용** | 고성능 CPU | 범용 | IoT/센서 | ASIC |
+
+---
+
+## 🔍 제약 조건 검증 방법
+
+### Genus (합성 후)
+```tcl
+# QoR 리포트 확인
+report_qor
+report_timing -nworst 10
+report_area
+report_power
+report_constraint -all_violators
+```
+
+### Innovus (P&R 후)
+```tcl
+# 타이밍 검증
+report_timing -late    # Setup
+report_timing -early   # Hold
+
+# 면적 확인
+report_area
+
+# 전력 확인
+report_power
+
+# DRC 위반 확인
+verifyGeometry
+verifyConnectivity
+```
+
+---
+
+## 💡 실전 팁
+
+### 1. Clock Period 설정
+```tcl
+# 보수적 접근: 목표 주파수의 80% 여유
+# 목표 200MHz → 250MHz로 합성 → 여유 확보
+create_clock -name clk -period 4.0 [get_ports clk]
+```
+
+### 2. Input/Output Delay 가이드라인
+```tcl
+# 일반적 규칙: 클럭 주기의 20-40%
+# 5ns 주기 → 1.0~2.0ns delay
+set_input_delay -clock clk -max [expr $CLK_PERIOD * 0.3] [all_inputs]
+```
+
+### 3. 조건부 제약
+```tcl
+# 포트 존재 여부 확인 후 적용
+if { [sizeof_collection [get_ports rst_n]] > 0 } {
+    set_false_path -from [get_ports rst_n]
+}
+
+# 특정 모듈에만 적용
+if { [sizeof_collection [get_cells uart_module]] > 0 } {
+    set_multicycle_path -setup 2 -through [get_cells uart_module]
+}
+```
+
+### 4. 단계적 최적화
+```tcl
+# 1단계: 느슨한 제약으로 합성 성공 확인
+create_clock -period 10.0 [get_ports clk]
+
+# 2단계: 점진적으로 타이밍 강화
+create_clock -period 7.0 [get_ports clk]
+
+# 3단계: 목표 주파수 도달
+create_clock -period 5.0 [get_ports clk]
+```
+
+---
+
+## 📚 참고 자료
+
+- [Synopsys SDC User Guide](https://www.synopsys.com)
+- [Cadence Genus Documentation](https://www.cadence.com)
+- FreePDK45 Design Kit Documentation
+- IEEE 1364 (Verilog) / IEEE 1666 (SystemVerilog)
+```
+
+```
+
 * 실행방법
 
 ```
