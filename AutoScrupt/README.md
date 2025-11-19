@@ -6,6 +6,7 @@
 1. [Miniconda 설치](#1-miniconda-설치)  
 2. [사전준비](#2-사전준비)  
 3. [프로젝트 생성 및 Auto Script 실행](#3-프로젝트-생성-및-auto-script-실행)
+4. [SDC (Synopsys Design Constraints) 제약 조건 가이드](#-SDC-(Synopsys-Design-Constraints)-제약-조건-가이드)
 
 
 ## 1. miniconda 설치
@@ -221,7 +222,6 @@ chmod +x run_rtl2gds.csh
 ./run_rtl2gds.csh
 ```
 
-* SDC Constraing 추가 예제
 # SDC (Synopsys Design Constraints) 제약 조건 가이드
 
 ## 📋 목차
