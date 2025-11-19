@@ -1,5 +1,16 @@
 # JSilicon Auto Script
 
+## 사전준비
+```
+makedir JSilicon2
+tar -xvf AutoScrupt.tar
+```
+
+```
+chmod +x run_rtl2gds.csh
+./run_rtl2gds.csh
+```
+
 ```csh
 [student001@gjchamber ~/JSilicon2]$ ./run_rtl2gds.csh
 
