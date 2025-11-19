@@ -4,6 +4,170 @@
 ## 1. miniconda 설치
 
 ```
+wget https://repo.anaconda.com/miniconda/Miniconda3-py310_23.3.1-0-Linux-x86_64.sh
+```
+
+```
+--2025-11-19 11:32:11--  https://repo.anaconda.com/miniconda/Miniconda3-py310_23.3.1-0-Linux-x86_64.sh
+Resolving repo.anaconda.com (repo.anaconda.com)... 104.16.191.158, 104.16.32.241, 2606:4700::6810:bf9e, ...
+Connecting to repo.anaconda.com (repo.anaconda.com)|104.16.191.158|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 73134376 (70M) [application/x-sh]
+Saving to: 'Miniconda3-py310_23.3.1-0-Linux-x86_64.sh'
+
+100%[====================================================================================================================================================================>] 73,134,376  10.9MB/s   in 6.3s
+
+2025-11-19 11:32:17 (11.1 MB/s) - 'Miniconda3-py310_23.3.1-0-Linux-x86_64.sh' saved [73134376/73134376]
+```
+
+```
+[student018@gjchamber ~]$ bash Miniconda3-py310_23.3.1-0-Linux-x86_64.sh
+Welcome to Miniconda3 py310_23.3.1-0
+
+In order to continue the installation process, please review the license
+agreement.
+Please, press ENTER to continue
+>>>
+
+```
+
+```
+======================================
+End User License Agreement - Miniconda
+======================================
+
+Copyright 2015-2023, Anaconda, Inc.
+
+All rights reserved under the 3-clause BSD License:
+
+This End User License Agreement (the "Agreement") is a legal agreement between you and Anaconda, Inc. ("Anaconda") and governs your use of Miniconda.
+
+Subject to the terms of this Agreement, Anaconda hereby grants you a non-exclusive, non-transferable license to:
+
+  * Install and use the Miniconda,
+  * Modify and create derivative works of sample source code delivered in Miniconda subject to the Terms of Service for the Repository (as defined hereinafter) available at https://www.anaconda.com/terms-of
+-service, and
+  * Redistribute code files in source (if provided to you by Anaconda as source) and binary forms, with or without modification subject to the requirements set forth below.
+
+Anaconda may, at its option, make available patches, workarounds or other updates to Miniconda. Unless the updates are provided with their separate governing terms, they are deemed part of Miniconda license
+d to you as provided in this Agreement. This Agreement does not entitle you to any support for Miniconda.
+
+Anaconda reserves all rights not expressly granted to you in this Agreement.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+  * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+  * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+  * Neither the name of Anaconda nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+You acknowledge that, as between you and Anaconda, Anaconda owns all right, title, and interest, including all intellectual property rights, in and to Miniconda and, with respect to third-party products dis
+tributed with or through Miniconda, the applicable third-party licensors own all right, title and interest, including all intellectual property rights, in and to such products. If you send or transmit any c
+ommunications or materials to Anaconda suggesting or recommending changes to the software or documentation, including without limitation, new features or functionality relating thereto, or any comments, que
+stions, suggestions or the like ("Feedback"), Anaconda is free to use such Feedback. You hereby assign to Anaconda all right, title, and interest in, and Anaconda is free to use, without any attribution or
+compensation to any party, any ideas, know-how, concepts, techniques or other intellectual property rights contained in the Feedback, for any purpose whatsoever, although Anaconda is not required to use any
+ Feedback.
+
+DISCLAIMER
+==========
+
+THIS SOFTWARE IS PROVIDED BY ANACONDA AND ITS CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULA
+R PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL ANACONDA BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GO
+ODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) AR
+ISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, ANACONDA AND ITS AFFILIATES SHALL NOT BE LIABLE FOR ANY SPECIAL, INCIDENTAL, PUNITIVE OR CONSEQUENTIAL DAMAGES, OR ANY LOST PROFITS, LOSS OF USE, LOSS OF DATA OR LOSS
+ OF GOODWILL, OR THE COSTS OF PROCURING SUBSTITUTE PRODUCTS, ARISING OUT OF OR IN CONNECTION WITH THIS AGREEMENT OR THE USE OR PERFORMANCE OF MINICONDA, WHETHER SUCH LIABILITY ARISES FROM ANY CLAIM BASED UP
+ON BREACH OF CONTRACT, BREACH OF WARRANTY, TORT (INCLUDING NEGLIGENCE), PRODUCT LIABILITY OR ANY OTHER CAUSE OF ACTION OR THEORY OF LIABILITY. IN NO EVENT WILL THE TOTAL CUMULATIVE LIABILITY OF ANACONDA AND
+ ITS AFFILIATES UNDER OR ARISING OUT OF THIS AGREEMENT EXCEED 10.00 U.S. DOLLARS.
+
+Miscellaneous
+=============
+
+If you want to terminate this Agreement, you may do so by discontinuing use of Miniconda. Anaconda may, at any time, terminate this Agreement and the license granted hereunder if you fail to comply with any
+ term of this Agreement. Upon any termination of this Agreement, you agree to promptly discontinue use of the Miniconda and destroy all copies in your possession or control. Upon any termination of this Agr
+eement all provisions survive except for the licenses granted to you.
+
+This Agreement is governed by and construed in accordance with the internal laws of the State of Texas without giving effect to any choice or conflict of law provision or rule that would require or permit t
+he application of the laws of any jurisdiction other than those of the State of Texas. Any legal suit, action, or proceeding arising out of or related to this Agreement or the licenses granted hereunder by
+--More--
+
+
+
+
+You must comply with all domestic and international export laws and regulations that apply to the software, which include restrictions on destinations, end users, and end use. Miniconda includes cryptograph
+ic software. The country in which you currently reside may have restrictions on the import, possession, use, and/or re-export to another country, of encryption software. BEFORE using any encryption software
+, please check your country's laws, regulations and policies concerning the import, possession, or use, and re-export of encryption software, to see if this is permitted. See the Wassenaar Arrangement http:
+//www.wassenaar.org/ for more information.
+
+Anaconda has self-classified this software as Export Commodity Control Number (ECCN) EAR99, which includes mass market information security software using or performing cryptographic functions with asymmetr
+ic algorithms. No license is required for export of this software to non-embargoed countries.
+
+The Intel Math Kernel Library contained in Miniconda is classified by Intel as ECCN 5D992.c with no license required for export to non-embargoed countries.
+
+The following packages listed on https://www.anaconda.com/cryptography are included in the Repository accessible through Miniconda that relate to cryptography.
+
+Last updated March 21, 2022
+
+
+Do you accept the license terms? [yes|no]
+[no] >>> yes <======== 입력
+
+```
+
+* 질문에 yes 및 Enter로 확인할것.
+
+```
+Do you accept the license terms? [yes|no]
+[no] >>> yes
+
+Miniconda3 will now be installed into this location:
+/home/student018/miniconda3
+
+  - Press ENTER to confirm the location
+  - Press CTRL-C to abort the installation
+  - Or specify a different location below
+
+[/home/student018/miniconda3] >>>
+PREFIX=/home/student018/miniconda3
+Unpacking payload ...
+
+Installing base environment...
+
+
+Downloading and Extracting Packages
+
+
+Downloading and Extracting Packages
+
+Preparing transaction: done
+Executing transaction: done
+installation finished.
+Do you wish the installer to initialize Miniconda3
+by running conda init? [yes|no]
+[no] >>> yes
+no change     /home/student018/miniconda3/condabin/conda
+no change     /home/student018/miniconda3/bin/conda
+no change     /home/student018/miniconda3/bin/conda-env
+no change     /home/student018/miniconda3/bin/activate
+no change     /home/student018/miniconda3/bin/deactivate
+no change     /home/student018/miniconda3/etc/profile.d/conda.sh
+no change     /home/student018/miniconda3/etc/fish/conf.d/conda.fish
+no change     /home/student018/miniconda3/shell/condabin/Conda.psm1
+no change     /home/student018/miniconda3/shell/condabin/conda-hook.ps1
+no change     /home/student018/miniconda3/lib/python3.10/site-packages/xontrib/conda.xsh
+no change     /home/student018/miniconda3/etc/profile.d/conda.csh
+modified      /home/student018/.bashrc
+
+==> For changes to take effect, close and re-open your current shell. <==
+
+If you'd prefer that conda's base environment not be activated on startup,
+   set the auto_activate_base parameter to false:
+
+conda config --set auto_activate_base false
+
+Thank you for installing Miniconda3!
+[student018@gjchamber ~]$
+
 ```
 
 
@@ -13,9 +177,11 @@
 vi ~/.cshrc
 ```
 
+ 
+* 각자 위치가 다른 부분이 있으니 수정할것.
 ```
 setenv PATH /tools/cadence/XCELIUMMAIN2409/tools/bin:${PATH}
-setenv PATH /home/student001/miniconda3/bin:${PATH}
+setenv PATH /home/student001/miniconda3/bin:${PATH} <== 각자 위치가 다름
 setenv PATH /tools/cadence/DDI231/GENUS231/bin:${PATH}
 setenv PATH /tools/cadence/DDI231/INNOVUS231/bin:${PATH}
 ```
