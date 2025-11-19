@@ -8279,3 +8279,114 @@ innovus
 
 restoreDesign  jsilicon_final.enc.dat tt_um_Jsilicon
 ```
+
+### 결과 체크
+
+```
+[student018@gjchamber ~/JSilicon2]$ ./check_status.csh
+==========================================
+ JSilicon Design Flow Status Check
+ Design: tt_um_Jsilicon
+==========================================
+
+1. Synthesis Status
+-------------------
+  ✓ Synthesis COMPLETED
+-rw-r--r-- 1 student018 student018 105K Nov 19 13:47 results/netlist/tt_um_Jsilicon_synth.v
+
+  QoR Summary (마지막 20줄):
+    Hierarchical Instance Count       2
+
+    Area
+    ----
+    Cell Area                          2301.447
+    Physical Cell Area                 0.000
+    Total Cell Area (Cell+Physical)    2301.447
+    Net Area                           1566.517
+    Total Area (Cell+Physical+Net)     3867.964
+
+    Max Fanout                         42 (clk)
+    Min Fanout                         0 (n_3)
+    Average Fanout                     1.8
+    Terms to net ratio                 2.8538
+    Terms to instance ratio            3.0538
+    Runtime                            125.89702899999999 seconds
+    Elapsed Runtime                    128 seconds
+    Genus peak memory usage            2006.21
+    Innovus peak memory usage          no_value
+    Hostname                           localhost
+
+  Timing Summary:
+
+  Area Summary:
+           Instance        Module  Cell-Count  Cell-Area  Net-Area   Total-Area
+    ----------------------------------------------------------------------------
+    tt_um_Jsilicon        NA              799   2301.447  1566.516     3867.964
+      core_inst_uart_inst UART_TX         193    718.968   346.223     1065.191
+      dec_inst            DECODER           3     13.610     1.355       14.965
+
+2. Place & Route Status
+-----------------------
+  ✓ P&R COMPLETED
+-rw-r--r-- 1 student018 student018 586K Nov 19 13:50 results/def/tt_um_Jsilicon.def
+  ✓ Final netlist exists
+-rw-r--r-- 1 student018 student018 96K Nov 19 13:50 results/netlist/tt_um_Jsilicon_final.v
+
+  P&R Summary (마지막 30줄):
+    ==============================
+    Wire Length Distribution
+    ==============================
+    Total metal1 wire length: 216.0675 um
+    Total metal2 wire length: 2688.7775 um
+    Total metal3 wire length: 2817.0900 um
+    Total metal4 wire length: 514.1700 um
+    Total metal5 wire length: 49.5900 um
+    Total metal6 wire length: 0.0000 um
+    Total metal7 wire length: 0.0000 um
+    Total metal8 wire length: 0.0000 um
+    Total metal9 wire length: 0.0000 um
+    Total metal10 wire length: 0.0000 um
+    Total wire length: 6285.6950 um
+    Average wire length/net: 7.4830 um
+    Area of Power Net Distribution:
+        ------------------------------
+        Area of Power Net Distribution
+        ------------------------------
+        Layer Name  Area of Power Net  Routable Area  Percentage
+        metal1  90.1056  3292.1395  2.7370%
+        metal2  0.0000  3292.1395  0.0000%
+        metal3  0.0000  3292.1395  0.0000%
+        metal4  0.0000  3292.1395  0.0000%
+        metal5  0.0000  3292.1395  0.0000%
+        metal6  0.0000  3292.1395  0.0000%
+        metal7  0.0000  3292.1395  0.0000%
+        metal8  170.4300  3292.1395  5.1769%
+        metal9  0.0000  3292.1395  0.0000%
+        metal10  0.0000  3292.1395  0.0000%  For more information click here
+
+3. Static Timing Analysis Status
+--------------------------------
+  ✗ STA NOT completed or reports not found
+    Run: cd work/pnr && tempus -f ../../scripts/tempus/sta.tcl
+
+4. Physical Design Files
+------------------------
+  ✓ GDS file exists (Ready for tapeout!)
+-rw-r--r-- 1 student018 student018 711K Nov 19 13:50 results/gds/tt_um_Jsilicon.gds
+
+5. Log Files Status
+-------------------
+
+==========================================
+Next Steps:
+==========================================
+  ✓ All major steps completed!
+  1. Run DRC: calibre -drc drc.rule
+  2. Run LVS: calibre -lvs lvs.rule
+  3. Review all timing reports
+  4. Prepare tapeout package
+
+==========================================
+[student018@gjchamber ~/JSilicon2]$
+
+```
