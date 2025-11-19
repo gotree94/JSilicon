@@ -189,9 +189,6 @@ Python 3.10.10
 
 ```
   
-
-
-
 ## 2. 사전준비
 
 ```
@@ -211,6 +208,7 @@ setenv PATH /tools/cadence/DDI231/INNOVUS231/bin:${PATH}
 source ~/.cshrc
 ```
 
+
 ## 3. 프로젝트 생성 및 Auto Script 실행
 
 ```
@@ -222,6 +220,26 @@ tar -xvf AutoScrupt.tar
 chmod +x run_rtl2gds.csh
 ./run_rtl2gds.csh
 ```
+
+* SDC에서 Constraint를 수정하려면?
+
+```
+8번 라인:
+tclcreate_clock -name clk -period 5.0 [get_ports clk]
+
+- **Period: 5.0 ns** = 1/5ns = **200 MHz** ✓
+
+주석(3번 라인)에도 명시되어 있습니다:
+
+# Target: 200 MHz (5ns period)
+만약 다른 주파수로 변경하고 싶으시다면:
+
+100 MHz: period 10.0
+250 MHz: period 4.0
+500 MHz: period 2.0
+1 GHz: period 1.0
+```
+
 
 * 중간에 진행 관련 문의가 있으니 : y 입력 후 엔터
 
