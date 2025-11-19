@@ -240,6 +240,25 @@ tclcreate_clock -name clk -period 5.0 [get_ports clk]
 1 GHz: period 1.0
 ```
 
+* 실행방법
+
+```
+cd /home/student018/JSilicon2
+
+# 수정된 파일들 배치
+cp create_scripts.py ./
+cp jsilicon.sdc constraints/
+cp synthesis.tcl scripts/genus/
+cp mmmc.tcl scripts/innovus/
+cp pnr_flow.tcl scripts/innovus/
+cp generate_gds.tcl scripts/innovus/
+
+# 실행
+python3 create_scripts.py
+chmod +x run_rtl2gds.csh
+./run_rtl2gds.csh
+```
+
 
 * 중간에 진행 관련 문의가 있으니 : y 입력 후 엔터
 
