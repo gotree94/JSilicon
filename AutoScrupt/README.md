@@ -1,6 +1,6 @@
 # JSilicon Auto Script
 
-```
+```csh
 [student001@gjchamber ~/JSilicon2]$ ./run_rtl2gds.csh
 
 ==============================================================================
