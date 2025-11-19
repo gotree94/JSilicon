@@ -170,6 +170,20 @@ Thank you for installing Miniconda3!
 
 ```
 
+* 최종확인
+
+```
+[student018@gjchamber ~]$ source ~/.cshrc
+```
+
+```
+[student018@gjchamber ~]$ python --version
+Python 3.10.10
+
+```
+  
+
+
 
 ## 2. 사전준비
 
