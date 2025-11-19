@@ -214,6 +214,8 @@ chmod +x run_rtl2gds.csh
 ./run_rtl2gds.csh
 ```
 
+* 중간에 진행 관련 문의가 있으니 : y 입력 후 엔터
+
 ```csh
 [student001@gjchamber ~/JSilicon2]$ ./run_rtl2gds.csh
 
@@ -264,7 +266,7 @@ Stages:
 
 Total: ~15-20 minutes
 
-Continue? (y/n): y
+Continue? (y/n): y <== 사용자 입력
 
 ==============================================================================
 Stage 1: Synthesis
