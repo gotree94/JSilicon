@@ -1,5 +1,7 @@
 # JSilicon
 
+* https://github.com/mirseo/JSilicon/tree/main
+
 # Jsilicon 디자인 하이어러키 및 기능 정리
 
 ## 1. 전체 디자인 하이어러키
